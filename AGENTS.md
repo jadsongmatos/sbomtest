@@ -1,4 +1,4 @@
-# Ctest Agent Guidelines
+# Sbomtest Agent Guidelines
 
 > **CRITICAL:** This file establishes the logical and technical harness for all AI coding agents working in this repository. Every interaction, task, and code generation must obey these rules.
 
@@ -21,7 +21,7 @@ Every code change must be a "judgment of conformity" with the existing codebase.
 
 - **The Syllogism of Task:** Treat the existing codebase patterns and rules as the Major Premise. Treat the user's prompt or issue as the Minor Premise. Your generated code (Conclusion) must derive necessarily from both without contradiction.
 - **Style Invariance:** Replicate surrounding coding styles, error-handling paradigms, and naming conventions exactly. Match the 2-space indentation, semicolons, and template literals used in this project.
-- **Local Patterns First:** Before implementing, observe how similar operations are handled in `src/lib/` (e.g., error handling in `sbom.js`, file operations in `repo-downloader.js`).
+- **Local Patterns First:** Before implementing, observe how similar operations are handled in `src/lib/` (e.g., error handling in `sbom.ts`, file operations in `repo-downloader.ts`).
 
 ---
 
@@ -40,7 +40,7 @@ When executing complex or multi-step tasks, you must progress logically from a k
 You are operating within a rigorous Extreme Programming framework.
 
 - **Pilot-Navigator Ontology:** You are the "Pilot" (executor of the *How*). The human user is the "Navigator" (architect of the *What* and *Why*). Do not usurp architectural intent—execute implementations with tactical precision.
-- **Test-Driven Verification (TDD):** Never consider code "plausibly correct" without test coverage. Run `npm test` before concluding any task. If modifying logic, ensure tests pass.
+- **Test-Driven Verification (TDD):** Never consider code "plausibly correct" without test coverage. Run `bun test --isolate` before concluding any task. If modifying logic, ensure tests pass.
 - **Atomic, Production-Ready Increments:** Generate small, stable diffs. Every code emit must be capable of passing CI without breaking existing integrations.
 - **Combating Entropy:** Within the strict boundary of your current task, extract local helper functions to maintain interface simplicity. Do not stack new code into monolithic functions.
 
@@ -53,25 +53,21 @@ You are operating within a rigorous Extreme Programming framework.
 - **Build/Lint/Test Commands:**
 
 ### Primary Commands
-- `npm test` - Runs all Jest tests with coverage (`jest --coverage --silent`)
-- `npm run ctest` - Executes the main Ctest analysis (`node src/index.js`)
+- `bun test --isolate` - Runs all tests with Bun (isolation required for mock.module)
+- `bun run sbomtest` - Executes the main Sbomtest analysis
+- `sbomtest --help` - Shows all CLI options and usage examples
 
 ### Testing Specific Components
-- Run a single test file: `npx jest tests/<test-file>.js`
-- Run tests matching a pattern: `npx jest -t "test name pattern"`
-- Run tests in watch mode: `npx jest --watch`
-- Run tests with verbose output: `npx jest --verbose`
+- Run a single test file: `bun test --isolate tests/<test-file>.test.ts`
+- Run tests matching a pattern: `bun test --isolate -t "test name pattern"`
 
 ### Development Commands
-- Install dependencies: `npm install`
-- Update dependencies: `npm update`
-- Generate SBOM: `node src/index.js . --download-dependencies --direct-only`
-- Analyze specific file: `node src/index.js . --file=src/lib/utils.js --download-dependencies`
-- Analyze with custom download directory: `node src/index.js . --download-dependencies --download-dir=./deps`
-- Limit dependency downloads: `node src/index.js . --download-dependencies --max-downloads=5`
-- Lint source code: `npm run lint`
-- Fix lint issues: `npm run lint:fix`
-- Generate lint report: `npm run lint:report`
+- Install dependencies: `bun install`
+- Update dependencies: `bun update`
+- Type-check: `npx tsc --noEmit`
+- Lint source code: `bun run lint`
+- Fix lint issues: `bun run lint:fix`
+- Generate lint report: `bun run lint:report`
 
 ---
 
@@ -100,23 +96,23 @@ When generating code, guard against established software fallacies:
 Before concluding any task, silently execute this quality checklist:
 
 - [ ] Did I respect the Pilot-Navigator dynamic without overriding the human's architectural intent?
-- [ ] Is my code empirically proven by tests (`npm test` passes)?
+- [ ] Is my code empirically proven by tests (`bun test --isolate` passes)?
 - [ ] Did I fulfill the task without introducing new dependencies?
 - [ ] Is my code styled exactly like the rest of the file (2-space indent, semicolons, template literals)?
 - [ ] Did I remove all temporary debugging artifacts (e.g., `console.log`)?
 - [ ] Did I strictly avoid unsolicited refactoring of unrelated lines?
 - [ ] Is this solution apodictic (provably correct) rather than merely probable?
-- [ ] Did I run `npm run lint` and fix any issues?
+- [ ] Did I run `bun run lint` and fix any issues?
 
 ---
 
 ## Code Style Guidelines
 
 ### File Organization
-- Main entry point: `src/index.js`
-- Library modules: `src/lib/` (sbom.js, repo-downloader.js, source-analyzer.js, horsebox.js, markdown-generator.js, test-extractor.js, utils.js)
+- Main entry point: `src/index.ts`
+- Library modules: `src/lib/` (sbom.ts, repo-downloader.ts, source-analyzer.ts, horsebox.ts, markdown-generator.ts, test-extractor.ts, utils.ts)
 - Test files: `tests/` (one test file per library module)
-- Follow CommonJS module system (`require()`/`module.exports`)
+- Follow ESM module system (`import`/`export`)
 - Use absolute paths for file operations when possible (`path.resolve()`)
 - Separate concerns: SBOM generation, repo downloading, source analysis, Horsebox indexing, markdown generation
 
@@ -125,7 +121,7 @@ Before concluding any task, silently execute this quality checklist:
 - Destructure imports when using multiple exports from same module
 - Use relative paths for local imports (`./lib/utils` for same-level)
 - Sort imports alphabetically within groups
-- Place require statements at top of file, before function declarations
+- Use `import`/`export` (ESM) — no `require()` or `module.exports`
 
 ### Code Formatting
 - Use 2-space indentation
@@ -171,9 +167,14 @@ Before concluding any task, silently execute this quality checklist:
 - Use proper timeout values for external commands (60s for rsync, 5s for npm registry)
 
 ### Testing Practices
-- Each library module has corresponding test file (src/lib/utils.js → tests/utils.test.js)
+- Each library module has corresponding test file (src/lib/utils.ts → tests/utils.test.ts)
 - Test both positive and negative cases
-- Mock external dependencies when appropriate
+- Mock external dependencies when appropriate using `mock.module()` from `bun:test`
+- **CRITICAL:** Always run with `--isolate` flag — `mock.module()` is process-wide and `mock.restore()` does NOT reset mocked modules
+- Save real module references before calling `mock.module()` to avoid infinite recursion
+- For default imports (`import fs from 'fs'`): mock factory MUST include `default` key alongside named exports
+- Use `mock()` (not `mock.fn()`) as the mock factory function
+- `spyOn` is a top-level export from `bun:test` (not `mock.spyOn()`)
 - Use async/await for promise-based testing
 - Skip tests when required dependencies aren't available (Horsebox not installed)
 - Use descriptive test names that explain what is being tested
@@ -207,29 +208,26 @@ Before concluding any task, silently execute this quality checklist:
 - `src/` - Source code (main entry point and library modules)
 - `src/lib/` - Library modules (specialized functionality)
 - `tests/` - Test files (unit tests for each library module)
-- `coverage` - Istanbul coverage reports
+- `coverage` - Coverage reports
 - `src_modules/` - Dependency source code (downloaded during execution)
 - `.horsebox/` - Horsebox indexes
-- Cache directory: ~/.ctest/repos (for downloaded dependencies)
+- Cache directory: ~/.sbomtest/repos (for downloaded dependencies)
 
 ### Environment Requirements
-- Node.js >= 14.x
+- Bun >= 1.3.x (with `--isolate` flag for test isolation)
 - Horsebox installed globally (`hb` command available in PATH)
 - Internet connection for downloading dependencies
 - rsync command available for efficient file copying (with fallback to native copy)
 - Python and uv for Horsebox installation
 
 ### CLI Interface
-- Support for both positional (project path) and named arguments (--flag=value)
-- Sensible defaults for all options
-- Clear error messages with actionable guidance
-- Non-zero exit codes for failure cases
+- Run `sbomtest --help` for full options and examples
 
 ---
 
-## Ctest Overview (Portuguese)
+## Sbomtest Overview (Portuguese)
 
-Ctest é uma ferramenta de linha de comando que analisa projetos npm e gera arquivos markdown com testes das dependências externas para cada arquivo de código-fonte, usando **Horsebox** como mecanismo de busca de código.
+Sbomtest é uma ferramenta de linha de comando que analisa projetos npm e gera arquivos markdown com testes das dependências externas para cada arquivo de código-fonte, usando **Horsebox** como mecanismo de busca de código.
 
 ### Recursos
 
@@ -260,4 +258,4 @@ Ctest é uma ferramenta de linha de comando que analisa projetos npm e gera arqu
 
 ## Regras de Criação de Arquivos
 
-Não crie arquivos diretamente em **`/workspaces/ctest`**; crie-os **somente em subdiretórios** dentro desse diretório.
+Não crie arquivos diretamente em **`/workspaces/sbomtest`**; crie-os **somente em subdiretórios** dentro desse diretório.

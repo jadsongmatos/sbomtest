@@ -1,31 +1,40 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
-jest.mock('child_process');
-jest.mock('../src/lib/utils');
+const actualChildProcess = await import('child_process');
+const actualUtils = await import('../src/lib/utils');
 
-const { spawn } = require('child_process');
+const mockSpawn = mock();
+const childProcessMock = { ...actualChildProcess, spawn: mockSpawn };
+mock.module('child_process', () => ({ ...childProcessMock, default: childProcessMock }));
 
-const { getCacheDir } = require('../src/lib/utils');
-const { downloadRepos, parseRepoUrl } = require('../src/lib/repo-downloader');
+const mockGetCacheDir = mock();
+mock.module('../src/lib/utils', () => ({
+  ...actualUtils,
+  getCacheDir: mockGetCacheDir,
+}));
+
+const { downloadRepos, parseRepoUrl } = await import('../src/lib/repo-downloader');
+
+import { describe, it, expect, beforeEach, afterEach, mock, spyOn } from 'bun:test';
 
 describe('Repo Downloader Module', () => {
   const testDir = path.join(__dirname, 'fixtures', 'test-repos');
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    mockSpawn.mockClear();
+    mockGetCacheDir.mockClear();
     if (fs.existsSync(testDir)) {
       fs.rmSync(testDir, { recursive: true, force: true });
     }
     fs.mkdirSync(testDir, { recursive: true });
-    getCacheDir.mockReturnValue(testDir);
+    mockGetCacheDir.mockReturnValue(testDir);
   });
 
   afterEach(() => {
     if (fs.existsSync(testDir)) {
       fs.rmSync(testDir, { recursive: true, force: true });
     }
-    jest.restoreAllMocks();
   });
 
   describe('parseRepoUrl', () => {
@@ -75,20 +84,21 @@ describe('Repo Downloader Module', () => {
     });
 
     it('should handle undefined URL', () => {
-      const result = parseRepoUrl(undefined);
+      const result = parseRepoUrl(undefined as unknown as string);
       expect(result).toBeNull();
     });
   });
 
   describe('downloadRepos', () => {
     beforeEach(() => {
-      spawn.mockImplementation(() => {
+      mockSpawn.mockImplementation(() => {
+        const mockOn = mock((event: string, cb: (code: number) => void) => {
+          if (event === 'close') { process.nextTick(() => cb(0)); }
+        });
         const mockChild = {
-          stdout: { on: jest.fn() },
-          stderr: { on: jest.fn() },
-          on: jest.fn((event, cb) => {
-            if (event === 'close') { process.nextTick(() => cb(0)); }
-          })
+          stdout: { on: mock() },
+          stderr: { on: mock() },
+          on: mockOn
         };
         return mockChild;
       });
@@ -96,7 +106,7 @@ describe('Repo Downloader Module', () => {
 
     it('should handle component without repo_url', async () => {
       const components = [
-        { name: 'package1', version: '1.0.0' }
+        { name: 'package1', version: '1.0.0', repo_url: null as unknown as string }
       ];
 
       const { results } = await downloadRepos(components, { baseDir: testDir });
@@ -152,13 +162,14 @@ describe('Repo Downloader Module', () => {
     });
 
     it('should handle clone failure', async () => {
-      spawn.mockImplementation(() => {
+      mockSpawn.mockImplementation(() => {
+        const mockOn = mock((event: string, cb: (code: number) => void) => {
+          if (event === 'close') { process.nextTick(() => cb(1)); }
+        });
         const mockChild = {
-          stdout: { on: jest.fn() },
-          stderr: { on: jest.fn() },
-          on: jest.fn((event, cb) => {
-            if (event === 'close') { process.nextTick(() => cb(1)); }
-          })
+          stdout: { on: mock() },
+          stderr: { on: mock() },
+          on: mockOn
         };
         return mockChild;
       });
@@ -174,13 +185,14 @@ describe('Repo Downloader Module', () => {
     });
 
     it('should handle clone error', async () => {
-      spawn.mockImplementation(() => {
+      mockSpawn.mockImplementation(() => {
+        const mockOn = mock((event: string, cb: (err: Error) => void) => {
+          if (event === 'error') { process.nextTick(() => cb(new Error('Clone failed'))); }
+        });
         const mockChild = {
-          stdout: { on: jest.fn() },
-          stderr: { on: jest.fn() },
-          on: jest.fn((event, cb) => {
-            if (event === 'error') { process.nextTick(() => cb(new Error('Clone failed'))); }
-          })
+          stdout: { on: mock() },
+          stderr: { on: mock() },
+          on: mockOn
         };
         return mockChild;
       });
@@ -196,16 +208,17 @@ describe('Repo Downloader Module', () => {
 
     it('should retry clone without ref on failure', async () => {
       let callCount = 0;
-      spawn.mockImplementation(() => {
+      mockSpawn.mockImplementation(() => {
+        const mockOn = mock((event: string, cb: (code: number) => void) => {
+          if (event === 'close') {
+            callCount++;
+            process.nextTick(() => cb(callCount === 1 ? 1 : 0));
+          }
+        });
         const mockChild = {
-          stdout: { on: jest.fn() },
-          stderr: { on: jest.fn() },
-          on: jest.fn((event, cb) => {
-            if (event === 'close') {
-              callCount++;
-              process.nextTick(() => cb(callCount === 1 ? 1 : 0));
-            }
-          })
+          stdout: { on: mock() },
+          stderr: { on: mock() },
+          on: mockOn
         };
         return mockChild;
       });
@@ -216,7 +229,7 @@ describe('Repo Downloader Module', () => {
 
       const { results } = await downloadRepos(components, { baseDir: testDir });
 
-      expect(spawn).toHaveBeenCalledTimes(2);
+      expect(mockSpawn).toHaveBeenCalledTimes(2);
       expect(results.package.success).toBe(true);
     });
 
@@ -224,7 +237,7 @@ describe('Repo Downloader Module', () => {
       const components = [
         { name: 'pkg1', version: '1.0.0', repo_url: 'https://github.com/user/repo1' },
         { name: 'pkg2', version: '2.0.0', repo_url: 'https://github.com/user/repo2' },
-        { name: 'pkg3', version: '3.0.0' }
+        { name: 'pkg3', version: '3.0.0', repo_url: null as unknown as string }
       ];
 
       const { results } = await downloadRepos(components, { baseDir: testDir });
@@ -236,7 +249,7 @@ describe('Repo Downloader Module', () => {
     });
 
     it('should log summary', async () => {
-      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+      const consoleSpy = spyOn(console, 'log').mockImplementation(() => {});
 
       const components = [
         { name: 'pkg1', version: '1.0.0', repo_url: 'https://github.com/user/repo1' }

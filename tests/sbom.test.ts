@@ -1,54 +1,91 @@
-const fs = require('fs');
-const path = require('path');
-const { execSync } = require('child_process');
-const https = require('https');
+import { describe, it, expect, beforeEach, mock } from 'bun:test';
+import path from 'path';
+import https from 'https';
 
-jest.mock('fs');
-jest.mock('child_process');
-jest.mock('https');
+const actualFs = await import('fs');
+const actualChildProcess = await import('child_process');
+const actualHttps = await import('https');
+
+const mockReadFileSync = mock();
+const mockWriteFileSync = mock();
+const mockExistsSync = mock();
+const mockMkdirSync = mock();
+const mockReaddirSync = mock();
+const mockCopyFileSync = mock();
+const mockRmSync = mock();
+const mockUnlinkSync = mock();
+const mockStatSync = mock();
+
+const fsMock = {
+  ...actualFs,
+  readFileSync: mockReadFileSync,
+  writeFileSync: mockWriteFileSync,
+  existsSync: mockExistsSync,
+  mkdirSync: mockMkdirSync,
+  readdirSync: mockReaddirSync,
+  copyFileSync: mockCopyFileSync,
+  rmSync: mockRmSync,
+  unlinkSync: mockUnlinkSync,
+  statSync: mockStatSync,
+};
+mock.module('fs', () => ({ ...fsMock, default: fsMock }));
+
+const mockExecSync = mock();
+const childProcessMock = { ...actualChildProcess, execSync: mockExecSync };
+mock.module('child_process', () => ({ ...childProcessMock, default: childProcessMock }));
+
+const mockHttpsGet = mock();
+const httpsMock = { ...actualHttps, get: mockHttpsGet };
+mock.module('https', () => ({ ...httpsMock, default: httpsMock }));
 
 const {
   generateSBOM,
   readSBOM,
   extractComponents,
   createSBOMFromPackageLock,
-  detectPackageManager
-} = require('../src/lib/sbom');
+  detectPackageManager,
+  detectMergeConflicts,
+  formatMergeConflictError
+} = await import('../src/lib/sbom');
 
 describe('SBOM Module', () => {
   const testProjectDir = path.join(__dirname, 'fixtures', 'test-project');
   const testSBOMPath = path.join(testProjectDir, 'sbom.cdx.json');
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.resetModules();
-    
-    // Mock fs.existsSync to return true only for package-lock.json in test-project
-    fs.existsSync.mockImplementation((filePath) => {
-      if (filePath.endsWith('package-lock.json') && filePath.includes('test-project')) {
+    mockReadFileSync.mockClear();
+    mockWriteFileSync.mockClear();
+    mockExistsSync.mockClear();
+    mockExecSync.mockClear();
+    mockHttpsGet.mockClear();
+
+    mockExistsSync.mockImplementation((filePath: unknown) => {
+      const fp = String(filePath);
+      if (fp.endsWith('package-lock.json') && fp.includes('test-project')) {
         return true;
       }
-      if (filePath.endsWith('sbom.cdx.json') && filePath.includes('test-project')) {
+      if (fp.endsWith('sbom.cdx.json') && fp.includes('test-project')) {
         return true;
       }
-      if (filePath.endsWith('package.json') && filePath.includes('test-project')) {
+      if (fp.endsWith('package.json') && fp.includes('test-project')) {
         return true;
       }
       return false;
     });
-    
-    fs.readFileSync.mockImplementation((filePath) => {
-      if (filePath.endsWith('sbom.cdx.json')) {
+
+    mockReadFileSync.mockImplementation((filePath: unknown) => {
+      const fp = String(filePath);
+      if (fp.endsWith('sbom.cdx.json')) {
         return JSON.stringify({
           bomFormat: 'CycloneDX',
           specVersion: '1.4',
           components: [{ name: 'express', version: '4.18.0' }]
         });
       }
-      if (filePath.endsWith('package.json')) {
+      if (fp.endsWith('package.json')) {
         return JSON.stringify({ dependencies: { express: '4.18.0' } });
       }
-      if (filePath.endsWith('package-lock.json')) {
+      if (fp.endsWith('package-lock.json')) {
         return JSON.stringify({
           lockfileVersion: 2,
           packages: {
@@ -59,10 +96,6 @@ describe('SBOM Module', () => {
       }
       return '';
     });
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
   });
 
   describe('createSBOMFromPackageLock', () => {
@@ -241,51 +274,50 @@ describe('SBOM Module', () => {
 
       const sbom = await createSBOMFromPackageLock(packageLock, false, true);
 
-      // Should only include direct dependencies
       expect(sbom.components.length).toBeGreaterThan(0);
     });
   });
 
   describe('detectPackageManager', () => {
     it('should detect npm project (package-lock.json)', () => {
-      fs.existsSync.mockImplementation((filePath) => {
-        return filePath.endsWith('package-lock.json');
+      mockExistsSync.mockImplementation((filePath: unknown) => {
+        return String(filePath).endsWith('package-lock.json');
       });
-      
+
       const result = detectPackageManager('/test/project');
       expect(result).toEqual({ type: 'npm', lockPath: expect.stringContaining('package-lock.json') });
     });
 
     it('should detect PNPM project (pnpm-lock.yaml)', () => {
-      fs.existsSync.mockImplementation((filePath) => {
-        return filePath.endsWith('pnpm-lock.yaml');
+      mockExistsSync.mockImplementation((filePath: unknown) => {
+        return String(filePath).endsWith('pnpm-lock.yaml');
       });
-      
+
       const result = detectPackageManager('/test/project');
       expect(result).toEqual({ type: 'pnpm', lockPath: expect.stringContaining('pnpm-lock.yaml') });
     });
 
     it('should detect Yarn project (yarn.lock)', () => {
-      fs.existsSync.mockImplementation((filePath) => {
-        return filePath.endsWith('yarn.lock');
+      mockExistsSync.mockImplementation((filePath: unknown) => {
+        return String(filePath).endsWith('yarn.lock');
       });
-      
+
       const result = detectPackageManager('/test/project');
       expect(result).toEqual({ type: 'yarn', lockPath: expect.stringContaining('yarn.lock') });
     });
 
     it('should return null when no lock file found', () => {
-      fs.existsSync.mockReturnValue(false);
-      
+      mockExistsSync.mockReturnValue(false);
+
       const result = detectPackageManager('/test/project');
       expect(result).toBeNull();
     });
 
     it('should prioritize pnpm over npm when both exist', () => {
-      fs.existsSync.mockReturnValue(true);
-      
+      mockExistsSync.mockReturnValue(true);
+
       const result = detectPackageManager('/test/project');
-      expect(result.type).toBe('pnpm');
+      expect(result!.type).toBe('pnpm');
     });
   });
 
@@ -299,16 +331,16 @@ describe('SBOM Module', () => {
         ]
       };
 
-      // Mock to detect npm (package-lock.json exists, others don't)
-      fs.existsSync.mockImplementation((filePath) => {
-        return filePath.endsWith('package-lock.json') || filePath.endsWith('sbom.cdx.json') || filePath.endsWith('package.json');
+      mockExistsSync.mockImplementation((filePath: unknown) => {
+        const fp = String(filePath);
+        return fp.endsWith('package-lock.json') || fp.endsWith('sbom.cdx.json') || fp.endsWith('package.json');
       });
-      fs.readFileSync.mockReturnValue(JSON.stringify(mockSBOM));
-      execSync.mockImplementation(() => {});
+      mockReadFileSync.mockReturnValue(JSON.stringify(mockSBOM));
+      mockExecSync.mockImplementation(() => {});
 
       const result = await generateSBOM(testProjectDir, 'sbom.cdx.json');
 
-      expect(execSync).toHaveBeenCalledWith(
+      expect(mockExecSync).toHaveBeenCalledWith(
         expect.stringContaining('npx @cyclonedx/cyclonedx-npm'),
         expect.any(Object)
       );
@@ -325,17 +357,18 @@ describe('SBOM Module', () => {
         ]
       };
 
-      fs.existsSync.mockImplementation((filePath) => {
-        return filePath.endsWith('package-lock.json') || filePath.endsWith('sbom.cdx.json') || filePath.endsWith('package.json');
+      mockExistsSync.mockImplementation((filePath: unknown) => {
+        const fp = String(filePath);
+        return fp.endsWith('package-lock.json') || fp.endsWith('sbom.cdx.json') || fp.endsWith('package.json');
       });
-      fs.readFileSync
+      mockReadFileSync
         .mockReturnValueOnce(JSON.stringify({ dependencies: { express: '4.18.0' } }))
         .mockReturnValueOnce(JSON.stringify(mockSBOM));
-      execSync.mockImplementation(() => {});
+      mockExecSync.mockImplementation(() => {});
 
       await generateSBOM(testProjectDir, 'sbom.cdx.json', false, true);
 
-      expect(execSync).toHaveBeenCalledWith(
+      expect(mockExecSync).toHaveBeenCalledWith(
         expect.stringContaining('--omit dev --omit optional --omit peer'),
         expect.any(Object)
       );
@@ -356,18 +389,20 @@ describe('SBOM Module', () => {
         }
       };
 
-      fs.existsSync.mockImplementation((filePath) => {
-        return filePath.endsWith('package-lock.json') || filePath.endsWith('sbom.cdx.json') || filePath.endsWith('package.json');
+      mockExistsSync.mockImplementation((filePath: unknown) => {
+        const fp = String(filePath);
+        return fp.endsWith('package-lock.json') || fp.endsWith('sbom.cdx.json') || fp.endsWith('package.json');
       });
-      fs.readFileSync.mockReturnValue(JSON.stringify(mockSBOM));
-      execSync.mockImplementation(() => {});
+      mockReadFileSync.mockReturnValue(JSON.stringify(mockSBOM));
+      mockExecSync.mockImplementation(() => {});
 
-      https.get.mockImplementation((url, options, cb) => {
-        const req = { on: jest.fn() };
+      mockHttpsGet.mockImplementation((url: unknown, options: unknown, cb: unknown) => {
+        const callback = typeof options === 'function' ? options : cb;
+        const req = { on: mock() };
         process.nextTick(() => {
-          cb({
+          callback({
             statusCode: 200,
-            on: (event, handler) => {
+            on: (event: string, handler: (data?: string) => void) => {
               if (event === 'data') { handler(JSON.stringify(mockPackageInfo)); }
               if (event === 'end') { handler(); }
             }
@@ -378,7 +413,7 @@ describe('SBOM Module', () => {
 
       await generateSBOM(testProjectDir, 'sbom.cdx.json', true);
 
-      expect(https.get).toHaveBeenCalled();
+      expect(mockHttpsGet).toHaveBeenCalled();
     });
 
     it('should handle HTTPS errors when fetching repo URLs', async () => {
@@ -390,36 +425,39 @@ describe('SBOM Module', () => {
         ]
       };
 
-      fs.existsSync.mockImplementation((filePath) => {
-        return filePath.endsWith('package-lock.json') || filePath.endsWith('sbom.cdx.json') || filePath.endsWith('package.json');
+      mockExistsSync.mockImplementation((filePath: unknown) => {
+        const fp = String(filePath);
+        return fp.endsWith('package-lock.json') || fp.endsWith('sbom.cdx.json') || fp.endsWith('package.json');
       });
-      fs.readFileSync.mockReturnValue(JSON.stringify(mockSBOM));
-      execSync.mockImplementation(() => {});
+      mockReadFileSync.mockReturnValue(JSON.stringify(mockSBOM));
+      mockExecSync.mockImplementation(() => {});
 
-      https.get.mockImplementation((url, options, cb) => {
-        const req = { on: jest.fn() };
+      mockHttpsGet.mockImplementation((url: unknown, options: unknown, cb: unknown) => {
+        const callback = typeof options === 'function' ? options : cb;
+        const req = { on: mock() };
         process.nextTick(() => {
-          cb({ statusCode: 404 });
+          callback({ statusCode: 404 });
         });
         return req;
       });
 
       await generateSBOM(testProjectDir, 'sbom.cdx.json', true);
 
-      expect(https.get).toHaveBeenCalled();
+      expect(mockHttpsGet).toHaveBeenCalled();
     });
 
     it('should handle non-200 status codes', async () => {
-      https.get.mockImplementation((url, options, cb) => {
-        const req = { on: jest.fn() };
+      mockHttpsGet.mockImplementation((url: unknown, options: unknown, cb: unknown) => {
+        const callback = typeof options === 'function' ? options : cb;
+        const req = { on: mock() };
         process.nextTick(() => {
-          cb({ statusCode: 500 });
+          callback({ statusCode: 500 });
         });
         return req;
       });
 
-      const result = await new Promise((resolve) => {
-        https.get('https://registry.npmjs.org/test', { timeout: 5000 }, (res) => {
+      const result = await new Promise<unknown>((resolve) => {
+        https.get('https://registry.npmjs.org/test', { timeout: 5000 } as https.RequestOptions, (res) => {
           if (res.statusCode !== 200) {
             resolve(null);
           }
@@ -438,12 +476,12 @@ describe('SBOM Module', () => {
         components: []
       };
 
-      fs.readFileSync.mockReturnValue(JSON.stringify(mockSBOM));
+      mockReadFileSync.mockReturnValue(JSON.stringify(mockSBOM));
 
       const result = readSBOM(testSBOMPath);
 
       expect(result).toEqual(mockSBOM);
-      expect(fs.readFileSync).toHaveBeenCalledWith(testSBOMPath, 'utf8');
+      expect(mockReadFileSync).toHaveBeenCalledWith(testSBOMPath, 'utf8');
     });
   });
 
@@ -557,6 +595,152 @@ describe('SBOM Module', () => {
       const components = extractComponents(sbom);
 
       expect(components[0].repo_url).toBe('https://github.com/primary/repo');
+    });
+  });
+
+  describe('detectMergeConflicts', () => {
+    it('should detect merge conflict markers in JSON', () => {
+      const conflictContent = `{
+"name": "ultrah",
+<<<<<<< HEAD
+"version": "1.0.20",
+=======
+"version": "1.0.21",
+>>>>>>> main
+"lockfileVersion": 3
+}`;
+
+      const result = detectMergeConflicts(conflictContent);
+
+      expect(result.hasMergeConflict).toBe(true);
+      expect(result.conflicts).toHaveLength(1);
+      expect(result.conflicts[0].start).toBe(3);
+      expect(result.conflicts[0].separator).toBe(5);
+      expect(result.conflicts[0].end).toBe(7);
+    });
+
+    it('should detect multiple merge conflicts', () => {
+      const conflictContent = `{
+<<<<<<< HEAD
+"version": "1.0.20",
+=======
+"version": "1.0.21",
+>>>>>>> main
+"dependencies": {
+<<<<<<< HEAD
+"express": "4.18.0"
+=======
+"express": "4.19.0"
+>>>>>>> main
+}
+}`;
+
+      const result = detectMergeConflicts(conflictContent);
+
+      expect(result.hasMergeConflict).toBe(true);
+      expect(result.conflicts).toHaveLength(2);
+    });
+
+    it('should not detect conflicts in clean content', () => {
+      const cleanContent = `{
+"name": "ultrah",
+"version": "1.0.21",
+"lockfileVersion": 3
+}`;
+
+      const result = detectMergeConflicts(cleanContent);
+
+      expect(result.hasMergeConflict).toBe(false);
+      expect(result.conflicts).toHaveLength(0);
+    });
+
+    it('should handle conflicts with 3-way merge markers', () => {
+      const conflictContent = `{
+<<<<<<< HEAD
+"version": "1.0.20",
+||||||| merged common ancestors
+"version": "1.0.19",
+=======
+"version": "1.0.21",
+>>>>>>> main
+"data": {}
+}`;
+
+      const result = detectMergeConflicts(conflictContent);
+
+      expect(result.hasMergeConflict).toBe(true);
+      expect(result.conflicts[0].middle).toBe(4);
+    });
+  });
+
+  describe('formatMergeConflictError', () => {
+    it('should format error message with merge conflict details', () => {
+      const filePath = '/path/to/package-lock.json';
+      const conflicts = [
+        {
+          start: 3,
+          marker: '<<<<<<< HEAD',
+          separator: 5,
+          end: 7
+        }
+      ];
+
+      const message = formatMergeConflictError(filePath, conflicts);
+
+      expect(message).toContain('Detectado merge conflict não resolvido');
+      expect(message).toContain('package-lock.json');
+      expect(message).toContain('Conflito 1');
+      expect(message).toContain('Linha 3');
+      expect(message).toContain('git status');
+      expect(message).toContain('git add');
+      expect(message).toContain('git commit');
+    });
+
+    it('should format multiple conflicts in error message', () => {
+      const filePath = '/path/to/pnpm-lock.yaml';
+      const conflicts = [
+        { start: 3, marker: '<<<<<<< HEAD', separator: 5, end: 7 },
+        { start: 10, marker: '<<<<<<< HEAD', separator: 12, end: 14 }
+      ];
+
+      const message = formatMergeConflictError(filePath, conflicts);
+
+      expect(message).toContain('Conflito 1');
+      expect(message).toContain('Conflito 2');
+      expect(message).toContain('Linha 3');
+      expect(message).toContain('Linha 10');
+    });
+  });
+
+  describe('readSBOM with merge conflict detection', () => {
+    it('should throw error with helpful message when reading SBOM with merge conflicts', () => {
+      const conflictContent = `{
+<<<<<<< HEAD
+"bomFormat": "CycloneDX",
+=======
+"bomFormat": "OtherFormat",
+>>>>>>> main
+"components": []
+}`;
+
+      mockReadFileSync.mockReturnValue(conflictContent);
+
+      expect(() => {
+        readSBOM(testSBOMPath);
+      }).toThrow('Detectado merge conflict não resolvido');
+    });
+
+    it('should throw descriptive JSON error when not a merge conflict', () => {
+      const invalidContent = `{
+"bomFormat": "CycloneDX",
+invalid json here
+}`;
+
+      mockReadFileSync.mockReturnValue(invalidContent);
+
+      expect(() => {
+        readSBOM(testSBOMPath);
+      }).toThrow('Erro ao fazer parsing do SBOM');
     });
   });
 });

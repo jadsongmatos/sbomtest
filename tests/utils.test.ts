@@ -1,9 +1,35 @@
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
+import { describe, it, expect, beforeEach, mock } from 'bun:test';
 
-jest.mock('fs');
-jest.mock('os');
+const actualFs = await import('fs');
+const actualOs = await import('os');
+
+const mockReadFileSync = mock();
+const mockWriteFileSync = mock();
+const mockExistsSync = mock();
+const mockMkdirSync = mock();
+const mockReaddirSync = mock();
+const mockCopyFileSync = mock();
+const mockRmSync = mock();
+const mockUnlinkSync = mock();
+const mockStatSync = mock();
+
+const fsMock = {
+  ...actualFs,
+  readFileSync: mockReadFileSync,
+  writeFileSync: mockWriteFileSync,
+  existsSync: mockExistsSync,
+  mkdirSync: mockMkdirSync,
+  readdirSync: mockReaddirSync,
+  copyFileSync: mockCopyFileSync,
+  rmSync: mockRmSync,
+  unlinkSync: mockUnlinkSync,
+  statSync: mockStatSync,
+};
+mock.module('fs', () => ({ ...fsMock, default: fsMock }));
+
+const mockHomedir = mock();
+const osMock = { ...actualOs, homedir: mockHomedir };
+mock.module('os', () => ({ ...osMock, default: osMock }));
 
 const {
   uniq,
@@ -11,15 +37,15 @@ const {
   isTestFile,
   safeReadFile,
   getCacheDir
-} = require('../src/lib/utils');
+} = await import('../src/lib/utils');
 
 describe('Utils Module', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
+    mockReadFileSync.mockClear();
+    mockWriteFileSync.mockClear();
+    mockExistsSync.mockClear();
+    mockMkdirSync.mockClear();
+    mockHomedir.mockClear();
   });
 
   describe('uniq', () => {
@@ -142,16 +168,16 @@ describe('Utils Module', () => {
 
   describe('safeReadFile', () => {
     it('should read file content', () => {
-      fs.readFileSync.mockReturnValue('file content');
+      mockReadFileSync.mockReturnValue('file content');
 
       const result = safeReadFile('/test/file.js');
 
       expect(result).toBe('file content');
-      expect(fs.readFileSync).toHaveBeenCalledWith('/test/file.js', 'utf8');
+      expect(mockReadFileSync).toHaveBeenCalledWith('/test/file.js', 'utf8');
     });
 
     it('should return null if file does not exist', () => {
-      fs.readFileSync.mockImplementation(() => {
+      mockReadFileSync.mockImplementation(() => {
         throw new Error('ENOENT');
       });
 
@@ -161,7 +187,7 @@ describe('Utils Module', () => {
     });
 
     it('should return null on read error', () => {
-      fs.readFileSync.mockImplementation(() => {
+      mockReadFileSync.mockImplementation(() => {
         throw new Error('Permission denied');
       });
 
@@ -171,7 +197,7 @@ describe('Utils Module', () => {
     });
 
     it('should handle empty file', () => {
-      fs.readFileSync.mockReturnValue('');
+      mockReadFileSync.mockReturnValue('');
 
       const result = safeReadFile('/test/empty.js');
 
@@ -181,40 +207,39 @@ describe('Utils Module', () => {
 
   describe('getCacheDir', () => {
     it('should return cache directory path', () => {
-      os.homedir.mockReturnValue('/home/user');
-      fs.existsSync.mockReturnValue(true);
+      mockHomedir.mockReturnValue('/home/user');
+      mockExistsSync.mockReturnValue(true);
 
       const result = getCacheDir();
 
-      expect(result).toBe('/home/user/.ctest/repos');
+      expect(result).toBe('/home/user/.sbomtest/repos');
     });
 
     it('should create cache directory if it does not exist', () => {
-      os.homedir.mockReturnValue('/home/user');
-      fs.existsSync.mockReturnValue(false);
+      mockHomedir.mockReturnValue('/home/user');
+      mockExistsSync.mockReturnValue(false);
 
       getCacheDir();
 
-      // Should use restrictive permissions (mode 0o700) for security
-      expect(fs.mkdirSync).toHaveBeenCalledWith('/home/user/.ctest/repos', { recursive: true, mode: 0o700 });
+      expect(mockMkdirSync).toHaveBeenCalledWith('/home/user/.sbomtest/repos', { recursive: true, mode: 0o700 });
     });
 
     it('should use correct default cache path', () => {
-      os.homedir.mockReturnValue('/Users/testuser');
-      fs.existsSync.mockReturnValue(true);
+      mockHomedir.mockReturnValue('/Users/testuser');
+      mockExistsSync.mockReturnValue(true);
 
       const result = getCacheDir();
 
-      expect(result).toBe('/Users/testuser/.ctest/repos');
+      expect(result).toBe('/Users/testuser/.sbomtest/repos');
     });
 
     it('should handle Windows home directory', () => {
-      os.homedir.mockReturnValue('C:\\Users\\testuser');
-      fs.existsSync.mockReturnValue(true);
+      mockHomedir.mockReturnValue('C:\\Users\\testuser');
+      mockExistsSync.mockReturnValue(true);
 
       const result = getCacheDir();
 
-      expect(result).toContain('.ctest');
+      expect(result).toContain('.sbomtest');
       expect(result).toContain('repos');
     });
   });

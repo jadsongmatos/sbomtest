@@ -1,30 +1,40 @@
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
-// Mock external dependencies only
-jest.mock('../src/lib/horsebox');
-jest.mock('../src/lib/test-extractor');
+import { describe, it, expect, beforeEach, afterEach, mock } from 'bun:test';
 
-const { searchIndex } = require('../src/lib/horsebox');
-const { extractRelevantBlocksFromFile } = require('../src/lib/test-extractor');
-// Use real utils for normalizeLibraryNames and uniq
-const { isTestFile } = require('../src/lib/utils');
+const actualHorsebox = await import('../src/lib/horsebox');
+const actualTestExtractor = await import('../src/lib/test-extractor');
+
+const mockSearchIndex = mock();
+mock.module('../src/lib/horsebox', () => ({
+  ...actualHorsebox,
+  searchIndex: mockSearchIndex,
+}));
+
+const mockExtractRelevantBlocksFromFile = mock();
+mock.module('../src/lib/test-extractor', () => ({
+  ...actualTestExtractor,
+  extractRelevantBlocksFromFile: mockExtractRelevantBlocksFromFile,
+}));
+
+const { _isTestFile } = await import('../src/lib/utils');
 const {
   writeMarkdownForSource,
   buildQueriesForUsage,
   buildTermList,
   shortenPath
-} = require('../src/lib/markdown-generator');
+} = await import('../src/lib/markdown-generator');
 
 describe('Markdown Generator Module', () => {
   const testOutputDir = path.join(__dirname, 'fixtures', 'test-output');
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    mockSearchIndex.mockClear();
+    mockExtractRelevantBlocksFromFile.mockClear();
     if (fs.existsSync(testOutputDir)) {
       fs.rmSync(testOutputDir, { recursive: true, force: true });
     }
-    // Use restrictive permissions (owner-only) to avoid security issues with world-writable directories
     fs.mkdirSync(testOutputDir, { recursive: true, mode: 0o700 });
   });
 
@@ -32,12 +42,13 @@ describe('Markdown Generator Module', () => {
     if (fs.existsSync(testOutputDir)) {
       fs.rmSync(testOutputDir, { recursive: true, force: true });
     }
-    jest.restoreAllMocks();
   });
 
   describe('buildQueriesForUsage', () => {
     it('should build queries from chains', () => {
       const usage = {
+        functions: [],
+        members: {},
         chains: ['prisma.component.upsert', 'db.find']
       };
 
@@ -49,7 +60,9 @@ describe('Markdown Generator Module', () => {
 
     it('should build queries from functions', () => {
       const usage = {
-        functions: ['connect', 'disconnect']
+        functions: ['connect', 'disconnect'],
+        members: {},
+        chains: []
       };
 
       const queries = buildQueriesForUsage('pg', usage);
@@ -61,9 +74,11 @@ describe('Markdown Generator Module', () => {
 
     it('should build queries from members', () => {
       const usage = {
+        functions: [],
         members: {
           client: ['query', 'execute']
-        }
+        },
+        chains: []
       };
 
       const queries = buildQueriesForUsage('pg', usage);
@@ -76,7 +91,8 @@ describe('Markdown Generator Module', () => {
     it('should deduplicate queries', () => {
       const usage = {
         chains: ['lib.fn', 'lib.fn'],
-        functions: ['fn']
+        functions: ['fn'],
+        members: {}
       };
 
       const queries = buildQueriesForUsage('lib', usage);
@@ -86,7 +102,9 @@ describe('Markdown Generator Module', () => {
 
     it('should filter out short queries', () => {
       const usage = {
-        functions: ['a', 'abc']
+        functions: ['a', 'abc'],
+        members: {},
+        chains: []
       };
 
       const queries = buildQueriesForUsage('lib', usage);
@@ -95,14 +113,14 @@ describe('Markdown Generator Module', () => {
     });
 
     it('should handle empty usage', () => {
-      const queries = buildQueriesForUsage('lib', {});
+      const queries = buildQueriesForUsage('lib', { functions: [], members: {}, chains: [] });
       expect(queries).toEqual([]);
     });
   });
 
   describe('buildTermList', () => {
     it('should build terms from library name', () => {
-      const terms = buildTermList('@scope/package', {});
+      const terms = buildTermList('@scope/package', { functions: [], members: {}, chains: [] });
       expect(terms).toContain('@scope/package');
       expect(terms).toContain('scope/package');
       expect(terms).toContain('package');
@@ -110,6 +128,8 @@ describe('Markdown Generator Module', () => {
 
     it('should build terms from chains', () => {
       const usage = {
+        functions: [],
+        members: {},
         chains: ['prisma.user.find']
       };
 
@@ -122,7 +142,9 @@ describe('Markdown Generator Module', () => {
 
     it('should build terms from functions', () => {
       const usage = {
-        functions: ['connect', 'query']
+        functions: ['connect', 'query'],
+        members: {},
+        chains: []
       };
 
       const terms = buildTermList('pg', usage);
@@ -132,9 +154,11 @@ describe('Markdown Generator Module', () => {
 
     it('should build terms from members', () => {
       const usage = {
+        functions: [],
         members: {
           client: ['execute', 'release']
-        }
+        },
+        chains: []
       };
 
       const terms = buildTermList('pg', usage);
@@ -143,12 +167,12 @@ describe('Markdown Generator Module', () => {
     });
 
     it('should handle empty usage', () => {
-      const terms = buildTermList('lib', {});
+      const terms = buildTermList('lib', { functions: [], members: {}, chains: [] });
       expect(terms).toContain('lib');
     });
 
     it('should filter out empty terms', () => {
-      const terms = buildTermList('', {});
+      const terms = buildTermList('', { functions: [], members: {}, chains: [] });
       expect(terms).not.toContain('');
     });
   });
@@ -177,8 +201,8 @@ describe('Markdown Generator Module', () => {
 
   describe('writeMarkdownForSource', () => {
     beforeEach(() => {
-      searchIndex.mockReturnValue([]);
-      extractRelevantBlocksFromFile.mockReturnValue([]);
+      mockSearchIndex.mockReturnValue([]);
+      mockExtractRelevantBlocksFromFile.mockReturnValue([]);
     });
 
     it('should write markdown with no external libraries', async () => {
@@ -200,8 +224,8 @@ describe('Markdown Generator Module', () => {
 
     it('should write markdown with library usage', async () => {
       const outputFile = path.join(testOutputDir, 'usage.md');
-      searchIndex.mockReturnValue([{ path: '/test/test.test.js' }]);
-      extractRelevantBlocksFromFile.mockReturnValue([
+      mockSearchIndex.mockReturnValue([{ path: '/test/test.test.js' }]);
+      mockExtractRelevantBlocksFromFile.mockReturnValue([
         { title: 'should work', code: 'test("should work", () => {})' }
       ]);
 
@@ -266,8 +290,8 @@ describe('Markdown Generator Module', () => {
 
     it('should deduplicate test blocks', async () => {
       const outputFile = path.join(testOutputDir, 'dedup.md');
-      searchIndex.mockReturnValue([{ path: '/test/test.test.js' }]);
-      extractRelevantBlocksFromFile.mockReturnValue([
+      mockSearchIndex.mockReturnValue([{ path: '/test/test.test.js' }]);
+      mockExtractRelevantBlocksFromFile.mockReturnValue([
         { title: 'same test', code: 'test("same", () => {})' },
         { title: 'same test', code: 'test("same", () => {})' }
       ]);
@@ -288,10 +312,10 @@ describe('Markdown Generator Module', () => {
       expect(occurrences).toBe(1);
     });
 
-    it('should handle test files with ctest-work prefix', async () => {
+    it('should handle test files with sbomtest-work prefix', async () => {
       const outputFile = path.join(testOutputDir, 'work.md');
-      searchIndex.mockReturnValue([{ path: '/tmp/ctest-work-abc/lib-name/tests/test.test.js' }]);
-      extractRelevantBlocksFromFile.mockReturnValue([
+      mockSearchIndex.mockReturnValue([{ path: '/tmp/sbomtest-work-abc/lib-name/tests/test.test.js' }]);
+      mockExtractRelevantBlocksFromFile.mockReturnValue([
         { title: 'test', code: 'test("test", () => {})' }
       ]);
 

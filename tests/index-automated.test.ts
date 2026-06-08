@@ -1,39 +1,42 @@
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
-const { execSync } = require('child_process');
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+import { execSync, spawnSync } from 'child_process';
 
-const { analyze } = require('../src/index');
+import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
+
+const { analyze } = await import('../src/index');
+import type { AnalyzeResult } from '../src/index';
 const {
   generateSBOM,
   readSBOM,
   extractComponents,
   createSBOMFromPackageLock
-} = require('../src/lib/sbom');
+} = await import('../src/lib/sbom');
 const {
   downloadRepos,
   parseRepoUrl
-} = require('../src/lib/repo-downloader');
+} = await import('../src/lib/repo-downloader');
 const {
   analyzeSourceFile,
   scanSourceFiles
-} = require('../src/lib/source-analyzer');
+} = await import('../src/lib/source-analyzer');
 const {
   ensureHorsebox,
   buildFileContentIndex,
   buildFileLineIndex,
   searchIndex
-} = require('../src/lib/horsebox');
+} = await import('../src/lib/horsebox');
 const {
   writeMarkdownForSource
-} = require('../src/lib/markdown-generator');
+} = await import('../src/lib/markdown-generator');
 
 describe('index.js - Main Module', () => {
-  let testProjectPath;
-  let tempDir;
+  let testProjectPath: string;
+  let tempDir: string;
 
   beforeAll(() => {
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ctest-test-'));
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sbomtest-test-'));
     testProjectPath = path.join(__dirname, 'fixtures', 'test-project');
   });
 
@@ -45,23 +48,16 @@ describe('index.js - Main Module', () => {
 
   describe('analyze function', () => {
     it('should throw error for non-existent project path', async () => {
-      await expect(async () => {
-        await analyze('/non-existent/path-xyz-123');
-      }).rejects.toThrow('Project path does not exist');
+      expect(analyze('/non-existent/path-xyz-123')).rejects.toThrow('Project path does not exist');
     });
 
     it('should throw error when Horsebox is not installed', async () => {
-      // This test verifies that analyze() throws when ensureHorsebox fails
-      // Since horsebox is installed in the test environment, we'll test the
-      // error message directly by checking the ensureHorsebox function
-      const horseboxModule = require('../src/lib/horsebox');
+      const horseboxModule = await import('../src/lib/horsebox');
 
       expect(() => {
         horseboxModule.ensureHorsebox();
-      }).not.toThrow(); // Horsebox IS installed in test env
+      }).not.toThrow();
 
-      // The error handling is tested indirectly - if horsebox isn't installed,
-      // ensureHorsebox() throws "Horsebox not found" error
       expect(horseboxModule.ensureHorsebox.toString()).toContain('Horsebox');
     });
 
@@ -71,7 +67,7 @@ describe('index.js - Main Module', () => {
         return;
       }
 
-      const result = await analyze(testProjectPath, {
+      const result: AnalyzeResult = await analyze(testProjectPath, {
         sbomPath: 'test-sbom-temp.json'
       });
 
@@ -87,7 +83,7 @@ describe('index.js - Main Module', () => {
         return;
       }
 
-      const result = await analyze(testProjectPath, {
+      const result: AnalyzeResult = await analyze(testProjectPath, {
         sourceFile: 'index.js',
         sbomPath: 'test-sbom-single.json'
       });
@@ -103,7 +99,7 @@ describe('index.js - Main Module', () => {
         return;
       }
 
-      const result = await analyze(testProjectPath, {
+      const result: AnalyzeResult = await analyze(testProjectPath, {
         downloadDependencies: true,
         maxDownloads: 2,
         sbomPath: 'test-sbom-limited.json'
@@ -125,11 +121,11 @@ describe('index.js - Main Module', () => {
       expect(fileArg?.split('=')[1]).toBe('index.js');
       expect(downloadFlag).toBe(true);
       expect(maxDownloadsArg).toBe('--max-downloads=5');
-      expect(parseInt(maxDownloadsArg?.split('=')[1], 10)).toBe(5);
+      expect(parseInt(maxDownloadsArg?.split('=')[1] ?? '', 10)).toBe(5);
     });
 
     it('should use defaults when no arguments provided', () => {
-      const args = [];
+      const args: string[] = [];
       const fileArg = args.find(arg => arg.startsWith('--file='));
       const downloadFlag = args.includes('--download-dependencies');
       const maxDownloadsArg = args.find(arg => arg.startsWith('--max-downloads='));
@@ -142,10 +138,10 @@ describe('index.js - Main Module', () => {
 });
 
 describe('SBOM Module Integration', () => {
-  let tempProjectPath;
+  let tempProjectPath: string;
 
   beforeAll(() => {
-    tempProjectPath = fs.mkdtempSync(path.join(os.tmpdir(), 'ctest-sbom-'));
+    tempProjectPath = fs.mkdtempSync(path.join(os.tmpdir(), 'sbomtest-sbom-'));
     const packageJson = {
       name: 'test-project',
       version: '1.0.0',
@@ -157,7 +153,6 @@ describe('SBOM Module Integration', () => {
       path.join(tempProjectPath, 'package.json'),
       JSON.stringify(packageJson, null, 2)
     );
-    // Create a minimal package-lock.json for fallback
     const packageLock = {
       name: 'test-project',
       version: '1.0.0',
@@ -261,21 +256,21 @@ describe('Repo Downloader Integration', () => {
     const testCases = [
       {
         input: 'https://github.com/lodash/lodash',
-        expected: { gitUrl: 'https://github.com/lodash/lodash.git', ref: null }
+        expected: { gitUrl: 'https://github.com/lodash/lodash.git', ref: null as string | null }
       },
       {
         input: 'git@github.com:lodash/lodash.git',
-        expected: { gitUrl: 'https://github.com/lodash/lodash.git', ref: null }
+        expected: { gitUrl: 'https://github.com/lodash/lodash.git', ref: null as string | null }
       },
       {
         input: 'https://github.com/expressjs/express#4.18.0',
-        expected: { gitUrl: 'https://github.com/expressjs/express.git', ref: 'v4.18.0' }
+        expected: { gitUrl: 'https://github.com/expressjs/express.git', ref: 'v4.18.0' as string | null }
       }
     ];
 
     testCases.forEach(({ input, expected }) => {
       const result = parseRepoUrl(input, input.includes('4.18.0') ? '4.18.0' : undefined);
-      expect(result.gitUrl).toBe(expected.gitUrl);
+      expect(result!.gitUrl).toBe(expected.gitUrl);
     });
   });
 
@@ -304,7 +299,7 @@ describe('Repo Downloader Integration', () => {
       {
         name: 'test-pkg',
         version: '1.0.0',
-        repo_url: null
+        repo_url: null as string | null
       }
     ];
 
@@ -314,7 +309,7 @@ describe('Repo Downloader Integration', () => {
   });
 
   it('should use custom download directory when provided', async () => {
-    const customDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ctest-custom-deps-'));
+    const customDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sbomtest-custom-deps-'));
     const components = [
       {
         name: 'lodash',
@@ -327,13 +322,12 @@ describe('Repo Downloader Integration', () => {
     expect(result.downloadRoot).toBe(customDir);
     expect(fs.existsSync(customDir)).toBe(true);
 
-    // Manual cleanup for custom dir in tests
     fs.rmSync(customDir, { recursive: true, force: true });
   }, 60000);
 });
 
 describe('Source Analyzer Integration', () => {
-  let tempFile;
+  let tempFile: string;
 
   beforeAll(() => {
     tempFile = path.join(os.tmpdir(), `test-source-${Date.now()}.js`);
@@ -347,13 +341,13 @@ describe('Source Analyzer Integration', () => {
 
   it('should analyze source file with ES6 imports', () => {
     const content = `
-      import { generateSBOM, readSBOM } from './lib/sbom';
-      import path from 'path';
-      import fs from 'fs';
-      
-      const result = generateSBOM('/some/path');
-      const resolved = path.join('/a', '/b');
-    `;
+import { generateSBOM, readSBOM } from './lib/sbom';
+import path from 'path';
+import fs from 'fs';
+
+const result = generateSBOM('/some/path');
+const resolved = path.join('/a', '/b');
+`;
 
     fs.writeFileSync(tempFile, content);
     const result = analyzeSourceFile(tempFile);
@@ -366,12 +360,12 @@ describe('Source Analyzer Integration', () => {
 
   it('should analyze source file with CommonJS requires', () => {
     const content = `
-      const { downloadRepos } = require('./lib/repo-downloader');
-      const path = require('path');
-      
-      downloadRepos([]);
-      path.join('a', 'b');
-    `;
+const { downloadRepos } = require('./lib/repo-downloader');
+const path = require('path');
+
+downloadRepos([]);
+path.join('a', 'b');
+`;
 
     fs.writeFileSync(tempFile, content);
     const result = analyzeSourceFile(tempFile);
@@ -383,14 +377,14 @@ describe('Source Analyzer Integration', () => {
 
   it('should detect member expression chains', () => {
     const content = `
-      import { PrismaClient } from '@prisma/client';
-      
-      const prisma = new PrismaClient();
-      const result = await prisma.component.upsert({
-        where: { id: 1 },
-        data: { name: 'test' }
-      });
-    `;
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+const result = await prisma.component.upsert({
+  where: { id: 1 },
+  data: { name: 'test' }
+});
+`;
 
     fs.writeFileSync(tempFile, content);
     const result = analyzeSourceFile(tempFile);
@@ -402,11 +396,11 @@ describe('Source Analyzer Integration', () => {
 
   it('should track class instances', () => {
     const content = `
-      import { PrismaClient } from '@prisma/client';
-      
-      const prisma = new PrismaClient();
-      prisma.user.findMany();
-    `;
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+prisma.user.findMany();
+`;
 
     fs.writeFileSync(tempFile, content);
     const result = analyzeSourceFile(tempFile);
@@ -425,15 +419,14 @@ describe('Source Analyzer Integration', () => {
 
     const files = scanSourceFiles(fixturePath);
     expect(Array.isArray(files)).toBe(true);
-    // May be 0 if fixture is empty or doesn't exist properly
   });
 
   it('should exclude node_modules and test directories', () => {
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ctest-scan-'));
+    const tempScanDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sbomtest-scan-'));
 
-    const srcDir = path.join(tempDir, 'src');
-    const nodeModulesDir = path.join(tempDir, 'node_modules');
-    const testsDir = path.join(tempDir, 'tests');
+    const srcDir = path.join(tempScanDir, 'src');
+    const nodeModulesDir = path.join(tempScanDir, 'node_modules');
+    const testsDir = path.join(tempScanDir, 'tests');
 
     fs.mkdirSync(srcDir, { recursive: true });
     fs.mkdirSync(nodeModulesDir, { recursive: true });
@@ -443,31 +436,31 @@ describe('Source Analyzer Integration', () => {
     fs.writeFileSync(path.join(nodeModulesDir, 'lib.js'), 'console.log("nm");');
     fs.writeFileSync(path.join(testsDir, 'test.js'), 'console.log("test");');
 
-    const files = scanSourceFiles(tempDir);
+    const files = scanSourceFiles(tempScanDir);
 
     expect(files.some(f => f.includes('src/index.js'))).toBe(true);
     expect(files.some(f => f.includes('node_modules'))).toBe(false);
     expect(files.some(f => f.includes('tests/test.js'))).toBe(false);
 
-    fs.rmSync(tempDir, { recursive: true, force: true });
+    fs.rmSync(tempScanDir, { recursive: true, force: true });
   });
 });
 
 describe('Horsebox Integration', () => {
-  let tempDir;
-  let indexDir;
+  let tempDir: string;
+  let indexDir: string;
 
   beforeAll(() => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ctest-hb-'));
     indexDir = path.join(tempDir, 'index');
 
     const content = `
-      function testExample() {
-        return 'test';
-      }
-      
-      module.exports = { testExample };
-    `;
+function testExample() {
+  return 'test';
+}
+
+module.exports = { testExample };
+`;
     fs.writeFileSync(path.join(tempDir, 'example.js'), content);
   });
 
@@ -504,15 +497,15 @@ describe('Horsebox Integration', () => {
   });
 
   it('should return empty array for whitespace-only query', () => {
-    const results = searchIndex(indexDir, '   ', 10);
+    const results = searchIndex(indexDir, ' ', 10);
     expect(results).toEqual([]);
   });
 });
 
 describe('Markdown Generator Integration', () => {
-  let tempDir;
-  let libsIndexDir;
-  let libsLineIndexDir;
+  let tempDir: string;
+  let libsIndexDir: string;
+  let libsLineIndexDir: string;
 
   beforeAll(() => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ctest-md-'));
@@ -520,13 +513,13 @@ describe('Markdown Generator Integration', () => {
     libsLineIndexDir = path.join(tempDir, 'libs-line-index');
 
     const testContent = `
-      const { generateSBOM } = require('./lib/sbom');
-      
-      test('should generate SBOM', () => {
-        const result = generateSBOM('/path');
-        expect(result).toBeDefined();
-      });
-    `;
+const { generateSBOM } = require('./lib/sbom');
+
+test('should generate SBOM', () => {
+  const result = generateSBOM('/path');
+  expect(result).toBeDefined();
+});
+`;
     fs.writeFileSync(path.join(tempDir, 'test-file.js'), testContent);
 
     buildFileContentIndex(tempDir, libsIndexDir);
@@ -545,8 +538,8 @@ describe('Markdown Generator Integration', () => {
     const usage = {
       './lib/sbom': {
         functions: ['generateSBOM'],
-        members: {},
-        chains: []
+        members: {} as Record<string, string[]>,
+        chains: [] as string[]
       }
     };
 
@@ -555,7 +548,8 @@ describe('Markdown Generator Integration', () => {
       usage,
       outputFile,
       libsIndexDir,
-      libsLineIndexDir
+      libsLineIndexDir,
+      projectRoot: tempDir
     });
 
     expect(fs.existsSync(outputFile)).toBe(true);
@@ -573,7 +567,8 @@ describe('Markdown Generator Integration', () => {
       usage: {},
       outputFile,
       libsIndexDir,
-      libsLineIndexDir
+      libsLineIndexDir,
+      projectRoot: tempDir
     });
 
     expect(fs.existsSync(outputFile)).toBe(true);
@@ -587,7 +582,7 @@ describe('Markdown Generator Integration', () => {
     const usage = {
       path: {
         functions: ['resolve', 'join'],
-        members: {},
+        members: {} as Record<string, string[]>,
         chains: ['resolve']
       }
     };
@@ -597,7 +592,8 @@ describe('Markdown Generator Integration', () => {
       usage,
       outputFile,
       libsIndexDir: '/non-existent-index',
-      libsLineIndexDir: '/non-existent-index-line'
+      libsLineIndexDir: '/non-existent-index-line',
+      projectRoot: tempDir
     });
 
     expect(fs.existsSync(outputFile)).toBe(true);
@@ -654,8 +650,6 @@ describe('path module tests (from index.js.md)', () => {
 });
 
 describe('child_process module tests (from index.js.md)', () => {
-  const { execSync, spawnSync } = require('child_process');
-
   it('should use execSync to execute commands', () => {
     const result = execSync('echo "test"', { encoding: 'utf8' });
     expect(result.trim()).toBe('test');
@@ -676,7 +670,7 @@ describe('child_process module tests (from index.js.md)', () => {
 
   it('should use spawnSync to execute commands', () => {
     const result = spawnSync('echo', ['test'], { encoding: 'utf8' });
-    expect(result.stdout.trim()).toBe('test');
+    expect(result.stdout!.trim()).toBe('test');
     expect(result.status).toBe(0);
   });
 
@@ -692,7 +686,7 @@ describe('child_process module tests (from index.js.md)', () => {
     const result = spawnSync('node', ['-e', 'console.error("error message")'], {
       encoding: 'utf8'
     });
-    expect(result.stderr.trim()).toBe('error message');
+    expect(result.stderr!.trim()).toBe('error message');
   });
 
   it('should handle non-zero exit codes', () => {
@@ -704,8 +698,8 @@ describe('child_process module tests (from index.js.md)', () => {
 });
 
 describe('fs module tests (from index.js.md)', () => {
-  let tempDir;
-  let tempFile;
+  let tempDir: string;
+  let tempFile: string;
 
   beforeAll(() => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ctest-fs-test-'));
@@ -835,16 +829,13 @@ describe('Integration tests for index.js main functionality', () => {
       expect(result).toBeDefined();
       expect(result.downloadRoot).toBe(customDownloadDir);
 
-      // Verify .horsebox directory was created inside download dir for indexes
       const horseboxDir = path.join(customDownloadDir, '.horsebox');
       expect(fs.existsSync(horseboxDir)).toBe(true);
 
-      // Verify index directories exist
       expect(fs.existsSync(path.join(horseboxDir, 'index-project-files'))).toBe(true);
       expect(fs.existsSync(path.join(horseboxDir, 'index-libs-files'))).toBe(true);
       expect(fs.existsSync(path.join(horseboxDir, 'index-libs-lines'))).toBe(true);
     } finally {
-      // Cleanup
       if (fs.existsSync(customDownloadDir)) {
         fs.rmSync(customDownloadDir, { recursive: true, force: true });
       }
@@ -861,7 +852,6 @@ describe('Integration tests for index.js main functionality', () => {
     }
 
     try {
-      // First run - creates indexes
       await analyze(testProjectPath, {
         sbomPath: 'sbom-first.json',
         downloadDependencies: true,
@@ -869,11 +859,9 @@ describe('Integration tests for index.js main functionality', () => {
         downloadDir: customDownloadDir
       });
 
-      // Verify indexes were created
       const horseboxDir = path.join(customDownloadDir, '.horsebox');
       expect(fs.existsSync(horseboxDir)).toBe(true);
 
-      // Second run - should reuse indexes
       const result = await analyze(testProjectPath, {
         sbomPath: 'sbom-second.json',
         downloadDependencies: true,

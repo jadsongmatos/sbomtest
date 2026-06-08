@@ -1,19 +1,21 @@
-const fs = require('fs');
+import { describe, it, expect, beforeEach, mock } from 'bun:test';
 
-jest.mock('../src/lib/utils');
-const { safeReadFile } = require('../src/lib/utils');
+const actualUtils = await import('../src/lib/utils');
+
+const mockSafeReadFile = mock();
+mock.module('../src/lib/utils', () => ({
+  ...actualUtils,
+  safeReadFile: mockSafeReadFile,
+}));
+
 const {
   extractTestBlocks,
   extractRelevantBlocksFromFile
-} = require('../src/lib/test-extractor');
+} = await import('../src/lib/test-extractor');
 
 describe('Test Extractor Module', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
+    mockSafeReadFile.mockClear();
   });
 
   describe('extractTestBlocks', () => {
@@ -203,7 +205,7 @@ test('should query data', () => {
   db.query();
 });
 `;
-      safeReadFile.mockReturnValue(content);
+      mockSafeReadFile.mockReturnValue(content);
 
       const blocks = extractRelevantBlocksFromFile('/test/file.js', ['connect to db']);
 
@@ -221,7 +223,7 @@ test('should query', () => {
   db.query();
 });
 `;
-      safeReadFile.mockReturnValue(content);
+      mockSafeReadFile.mockReturnValue(content);
 
       const blocks = extractRelevantBlocksFromFile('/test/file.js', ['connect']);
 
@@ -234,7 +236,7 @@ test('should Connect', () => {
   db.connect();
 });
 `;
-      safeReadFile.mockReturnValue(content);
+      mockSafeReadFile.mockReturnValue(content);
 
       const blocks = extractRelevantBlocksFromFile('/test/file.js', ['CONNECT']);
 
@@ -242,7 +244,7 @@ test('should Connect', () => {
     });
 
     it('should return empty array if file cannot be read', () => {
-      safeReadFile.mockReturnValue(null);
+      mockSafeReadFile.mockReturnValue(null);
 
       const blocks = extractRelevantBlocksFromFile('/test/file.js', ['connect']);
 
@@ -255,7 +257,7 @@ test('should query', () => {
   db.query();
 });
 `;
-      safeReadFile.mockReturnValue(content);
+      mockSafeReadFile.mockReturnValue(content);
 
       const blocks = extractRelevantBlocksFromFile('/test/file.js', ['connect']);
 
@@ -272,7 +274,7 @@ test('should query', () => {
   db.query();
 });
 `;
-      safeReadFile.mockReturnValue(content);
+      mockSafeReadFile.mockReturnValue(content);
 
       const blocks = extractRelevantBlocksFromFile('/test/file.js', ['connect', 'query']);
 
@@ -285,7 +287,7 @@ test('connection test', () => {
   // code
 });
 `;
-      safeReadFile.mockReturnValue(content);
+      mockSafeReadFile.mockReturnValue(content);
 
       const blocks = extractRelevantBlocksFromFile('/test/file.js', ['connection']);
 

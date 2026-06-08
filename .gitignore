@@ -25,3 +25,7 @@ ref/
 
 *.cdx.json
 src_modules/
+dist/
+*.js.md
+bun.lock
+.horsebox/

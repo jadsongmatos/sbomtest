@@ -1,10 +1,24 @@
-const fs = require('fs');
-const path = require('path');
+import { describe, it, expect, beforeEach, mock, spyOn } from 'bun:test';
 
-jest.mock('fs');
-jest.mock('@babel/parser');
+const actualFs = await import('fs');
+const actualParser = await import('@babel/parser');
+const realParse = actualParser.parse;
 
-const parser = require('@babel/parser');
+const mockExistsSync = mock();
+const mockReadFileSync = mock();
+const mockReaddirSync = mock();
+
+const fsMock = {
+  ...actualFs,
+  existsSync: mockExistsSync,
+  readFileSync: mockReadFileSync,
+  readdirSync: mockReaddirSync,
+};
+mock.module('fs', () => ({ ...fsMock, default: fsMock }));
+
+const mockParse = mock();
+const parserMock = { ...actualParser, parse: mockParse };
+mock.module('@babel/parser', () => ({ ...parserMock, default: parserMock }));
 
 const {
   analyzeSourceFile,
@@ -12,17 +26,16 @@ const {
   parseGitIgnore,
   patternToRegex,
   shouldIgnore
-} = require('../src/lib/source-analyzer');
+} = await import('../src/lib/source-analyzer');
 
 describe('Source Analyzer Module', () => {
   const testFile = '/test/project/src/app.js';
 
   beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
+    mockExistsSync.mockClear();
+    mockReadFileSync.mockClear();
+    mockReaddirSync.mockClear();
+    mockParse.mockClear();
   });
 
   describe('parseGitIgnore', () => {
@@ -33,8 +46,8 @@ node_modules
 *.log
 dist/
 `;
-      fs.existsSync.mockReturnValue(true);
-      fs.readFileSync.mockReturnValue(gitIgnoreContent);
+      mockExistsSync.mockReturnValue(true);
+      mockReadFileSync.mockReturnValue(gitIgnoreContent);
 
       const patterns = parseGitIgnore('/test/project');
 
@@ -49,8 +62,8 @@ node_modules
 # Another comment
 *.log
 `;
-      fs.existsSync.mockReturnValue(true);
-      fs.readFileSync.mockReturnValue(gitIgnoreContent);
+      mockExistsSync.mockReturnValue(true);
+      mockReadFileSync.mockReturnValue(gitIgnoreContent);
 
       const patterns = parseGitIgnore('/test/project');
 
@@ -58,7 +71,7 @@ node_modules
     });
 
     it('should return empty array if gitignore does not exist', () => {
-      fs.existsSync.mockReturnValue(false);
+      mockExistsSync.mockReturnValue(false);
 
       const patterns = parseGitIgnore('/test/project');
 
@@ -66,8 +79,8 @@ node_modules
     });
 
     it('should handle read errors gracefully', () => {
-      fs.existsSync.mockReturnValue(true);
-      fs.readFileSync.mockImplementation(() => {
+      mockExistsSync.mockReturnValue(true);
+      mockReadFileSync.mockImplementation(() => {
         throw new Error('Read error');
       });
 
@@ -126,7 +139,7 @@ node_modules
     });
 
     it('should handle empty patterns', () => {
-      const patterns = [];
+      const patterns: string[] = [];
       const result = shouldIgnore('/project/src/index.js', patterns, '/project');
       expect(result).toBe(false);
     });
@@ -134,7 +147,7 @@ node_modules
 
   describe('analyzeSourceFile', () => {
     it('should return empty object if file does not exist', () => {
-      fs.existsSync.mockReturnValue(false);
+      mockExistsSync.mockReturnValue(false);
 
       const result = analyzeSourceFile(testFile);
 
@@ -142,13 +155,13 @@ node_modules
     });
 
     it('should handle parse errors gracefully', () => {
-      fs.existsSync.mockReturnValue(true);
-      fs.readFileSync.mockReturnValue('invalid code {{{');
-      parser.parse.mockImplementation(() => {
+      mockExistsSync.mockReturnValue(true);
+      mockReadFileSync.mockReturnValue('invalid code {{{');
+      mockParse.mockImplementation(() => {
         throw new Error('Parse error');
       });
 
-      const consoleSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleSpy = spyOn(console, 'warn').mockImplementation(() => {});
       const result = analyzeSourceFile(testFile);
 
       expect(result).toEqual({});
@@ -158,47 +171,46 @@ node_modules
 
     describe('with real code analysis', () => {
       beforeEach(() => {
-        const realParser = jest.requireActual('@babel/parser');
-        parser.parse.mockImplementation((...args) => realParser.parse(...args));
-        fs.existsSync.mockReturnValue(true);
+        mockParse.mockImplementation((...args: unknown[]) => realParse(...(args as [string, object])));
+        mockExistsSync.mockReturnValue(true);
       });
 
       it('should detect CommonJS require with destructuring', () => {
-        fs.readFileSync.mockReturnValue(`const { readFileSync, writeFileSync } = require('fs');`);
+        mockReadFileSync.mockReturnValue('const { readFileSync, writeFileSync } = require(\'fs\');');
 
         const result = analyzeSourceFile(testFile);
 
         expect(result.fs).toBeDefined();
-        expect(result.fs.functions).toContain('readFileSync');
-        expect(result.fs.functions).toContain('writeFileSync');
+        expect(result.fs!.functions).toContain('readFileSync');
+        expect(result.fs!.functions).toContain('writeFileSync');
       });
 
       it('should detect member expressions from default require', () => {
-        fs.readFileSync.mockReturnValue(`const path = require('path');\npath.join('/a', 'b');`);
+        mockReadFileSync.mockReturnValue('const path = require(\'path\');\npath.join(\'/a\', \'b\');');
 
         const result = analyzeSourceFile(testFile);
 
         expect(result.path).toBeDefined();
-        expect(result.path.members.path).toContain('join');
+        expect(result.path!.members.path).toContain('join');
       });
 
       it('should detect ES6 named imports', () => {
-        fs.readFileSync.mockReturnValue(`import { join, resolve } from 'path';`);
+        mockReadFileSync.mockReturnValue('import { join, resolve } from \'path\';');
 
         const result = analyzeSourceFile(testFile);
 
         expect(result.path).toBeDefined();
-        expect(result.path.functions).toContain('join');
-        expect(result.path.functions).toContain('resolve');
+        expect(result.path!.functions).toContain('join');
+        expect(result.path!.functions).toContain('resolve');
       });
 
       it('should detect member expression chains', () => {
-        fs.readFileSync.mockReturnValue(`const db = require('prisma');\ndb.user.findMany();`);
+        mockReadFileSync.mockReturnValue('const db = require(\'prisma\');\ndb.user.findMany();');
 
         const result = analyzeSourceFile(testFile);
 
         expect(result.prisma).toBeDefined();
-        expect(result.prisma.chains).toContain('user.findMany');
+        expect(result.prisma!.chains).toContain('user.findMany');
       });
 
       it('should track class instances from destructured import', () => {
@@ -206,13 +218,13 @@ node_modules
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 prisma.user.findUnique();
-        `;
-        fs.readFileSync.mockReturnValue(code);
+`;
+        mockReadFileSync.mockReturnValue(code);
 
         const result = analyzeSourceFile(testFile);
 
         expect(result['@prisma/client']).toBeDefined();
-        expect(result['@prisma/client'].chains).toContain('user.findUnique');
+        expect(result['@prisma/client']!.chains).toContain('user.findUnique');
       });
 
       it('should detect multiple libraries in one file', () => {
@@ -221,8 +233,8 @@ const { readFileSync } = require('fs');
 const path = require('path');
 readFileSync('/test');
 path.join('/a', 'b');
-        `;
-        fs.readFileSync.mockReturnValue(code);
+`;
+        mockReadFileSync.mockReturnValue(code);
 
         const result = analyzeSourceFile(testFile);
 
@@ -231,7 +243,7 @@ path.join('/a', 'b');
       });
 
       it('should return empty object for file with no imports', () => {
-        fs.readFileSync.mockReturnValue(`function hello() { return 42; }`);
+        mockReadFileSync.mockReturnValue('function hello() { return 42; }');
 
         const result = analyzeSourceFile(testFile);
 
@@ -250,10 +262,10 @@ path.join('/a', 'b');
         { name: 'app.ts', isDirectory: () => false, isFile: () => true }
       ];
 
-      fs.readdirSync
-        .mockReturnValueOnce(rootEntries)
-        .mockReturnValueOnce(srcEntries);
-      fs.existsSync.mockReturnValue(false);
+      mockReaddirSync
+        .mockReturnValueOnce(rootEntries as any)
+        .mockReturnValueOnce(srcEntries as any);
+      mockExistsSync.mockReturnValue(false);
 
       const files = scanSourceFiles('/test/project');
 
@@ -267,8 +279,8 @@ path.join('/a', 'b');
         { name: 'index.js', isDirectory: () => false, isFile: () => true }
       ];
 
-      fs.readdirSync.mockReturnValue(mockEntries);
-      fs.existsSync.mockReturnValue(false);
+      mockReaddirSync.mockReturnValue(mockEntries as any);
+      mockExistsSync.mockReturnValue(false);
 
       const files = scanSourceFiles('/test/project');
 
@@ -281,9 +293,9 @@ path.join('/a', 'b');
         { name: 'index.js', isDirectory: () => false, isFile: () => true }
       ];
 
-      fs.readdirSync.mockReturnValue(mockEntries);
-      fs.existsSync.mockReturnValue(true);
-      fs.readFileSync.mockReturnValue('dist/');
+      mockReaddirSync.mockReturnValue(mockEntries as any);
+      mockExistsSync.mockReturnValue(true);
+      mockReadFileSync.mockReturnValue('dist/');
 
       const files = scanSourceFiles('/test/project');
 
@@ -296,8 +308,8 @@ path.join('/a', 'b');
         { name: 'index.js', isDirectory: () => false, isFile: () => true }
       ];
 
-      fs.readdirSync.mockReturnValue(mockEntries);
-      fs.existsSync.mockReturnValue(false);
+      mockReaddirSync.mockReturnValue(mockEntries as any);
+      mockExistsSync.mockReturnValue(false);
 
       const files = scanSourceFiles('/test/project', { excludeDirs: ['custom-ignore'] });
 
@@ -310,12 +322,12 @@ path.join('/a', 'b');
         { name: 'index.js', isDirectory: () => false, isFile: () => true }
       ];
 
-      fs.readdirSync.mockReturnValue(mockEntries);
-      fs.existsSync.mockReturnValue(true);
+      mockReaddirSync.mockReturnValue(mockEntries as any);
+      mockExistsSync.mockReturnValue(true);
 
-      const files = scanSourceFiles('/test/project', { respectGitIgnore: false });
+      const _files = scanSourceFiles('/test/project', { respectGitIgnore: false });
 
-      expect(fs.existsSync).not.toHaveBeenCalled();
+      expect(mockExistsSync).not.toHaveBeenCalled();
     });
 
     it('should handle various source file extensions', () => {
@@ -329,8 +341,8 @@ path.join('/a', 'b');
         { name: 'file.txt', isDirectory: () => false, isFile: () => true }
       ];
 
-      fs.readdirSync.mockReturnValue(mockEntries);
-      fs.existsSync.mockReturnValue(false);
+      mockReaddirSync.mockReturnValue(mockEntries as any);
+      mockExistsSync.mockReturnValue(false);
 
       const files = scanSourceFiles('/test/project');
 
@@ -349,12 +361,11 @@ path.join('/a', 'b');
         { name: 'helper.js', isDirectory: () => false, isFile: () => true }
       ];
 
-      fs.readdirSync
-        .mockReturnValueOnce(rootEntries)
-        .mockReturnValueOnce(srcEntries);
-      fs.existsSync.mockReturnValue(false);
+      mockReaddirSync
+        .mockReturnValueOnce(rootEntries as any)
+        .mockReturnValueOnce(srcEntries as any);
+      mockExistsSync.mockReturnValue(false);
 
-      // Only include files in src/ directory
       const files = scanSourceFiles('/test/project', { includePatterns: ['src/**'] });
 
       expect(files).toContain('/test/project/src/utils.ts');
@@ -374,12 +385,11 @@ path.join('/a', 'b');
         { name: 'helper.test.js', isDirectory: () => false, isFile: () => true }
       ];
 
-      fs.readdirSync
-        .mockReturnValueOnce(rootEntries)
-        .mockReturnValueOnce(srcEntries);
-      fs.existsSync.mockReturnValue(false);
+      mockReaddirSync
+        .mockReturnValueOnce(rootEntries as any)
+        .mockReturnValueOnce(srcEntries as any);
+      mockExistsSync.mockReturnValue(false);
 
-      // Exclude test files
       const files = scanSourceFiles('/test/project', { excludePatterns: ['**/*.test.js', '**/*.spec.js'] });
 
       expect(files).toContain('/test/project/index.js');
@@ -399,12 +409,11 @@ path.join('/a', 'b');
         { name: 'vendor.ts', isDirectory: () => false, isFile: () => true }
       ];
 
-      fs.readdirSync
-        .mockReturnValueOnce(rootEntries)
-        .mockReturnValueOnce(srcEntries);
-      fs.existsSync.mockReturnValue(false);
+      mockReaddirSync
+        .mockReturnValueOnce(rootEntries as any)
+        .mockReturnValueOnce(srcEntries as any);
+      mockExistsSync.mockReturnValue(false);
 
-      // Include src/** but exclude vendor files
       const files = scanSourceFiles('/test/project', {
         includePatterns: ['src/**', '*.js'],
         excludePatterns: ['**/vendor.*']
@@ -429,13 +438,12 @@ path.join('/a', 'b');
         { name: 'utils.js', isDirectory: () => false, isFile: () => true }
       ];
 
-      fs.readdirSync
-        .mockReturnValueOnce(rootEntries)
-        .mockReturnValueOnce(srcEntries)
-        .mockReturnValueOnce(libEntries);
-      fs.existsSync.mockReturnValue(false);
+      mockReaddirSync
+        .mockReturnValueOnce(rootEntries as any)
+        .mockReturnValueOnce(srcEntries as any)
+        .mockReturnValueOnce(libEntries as any);
+      mockExistsSync.mockReturnValue(false);
 
-      // Include both src/** and lib/**
       const files = scanSourceFiles('/test/project', { includePatterns: ['src/**', 'lib/**'] });
 
       expect(files).toContain('/test/project/src/app.ts');
