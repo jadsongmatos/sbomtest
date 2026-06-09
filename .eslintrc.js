@@ -6,6 +6,7 @@ module.exports = {
   },
   extends: [
     'eslint:recommended',
+    'standard',
   ],
   parser: '@typescript-eslint/parser',
   parserOptions: {
@@ -28,6 +29,12 @@ module.exports = {
     'linebreak-style': ['error', 'unix'],
     'quotes': ['error', 'single', { avoidEscape: true }],
     'semi': ['error', 'always'],
+    'comma-dangle': ['error', 'always-multiline'],
+    'space-before-function-paren': ['error', { anonymous: 'always', named: 'never', asyncArrow: 'always' }],
+    'quote-props': ['error', 'as-needed', { keywords: true, numbers: true }],
+    'camelcase': ['error', { allow: ['^repo_url$', '^_'] }],
+    'import/first': 'error',
+    'no-use-before-define': ['error', { functions: false, classes: false, variables: true }],
 
     'no-unused-vars': 'off',
     '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
@@ -73,6 +80,12 @@ module.exports = {
       files: ['*.js'],
       parserOptions: {
         sourceType: 'commonjs',
+      },
+    },
+    {
+      files: ['tests/**/*.ts'],
+      rules: {
+        'n/no-callback-literal': 'off',
       },
     },
   ],

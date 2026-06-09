@@ -14,18 +14,18 @@ const fsMock = {
   readFileSync: mockReadFileSync,
   readdirSync: mockReaddirSync,
 };
-mock.module('fs', () => ({ ...fsMock, default: fsMock }));
+mock.module('fs', () => ({ ...fsMock, 'default': fsMock }));
 
 const mockParse = mock();
 const parserMock = { ...actualParser, parse: mockParse };
-mock.module('@babel/parser', () => ({ ...parserMock, default: parserMock }));
+mock.module('@babel/parser', () => ({ ...parserMock, 'default': parserMock }));
 
 const {
   analyzeSourceFile,
   scanSourceFiles,
   parseGitIgnore,
   patternToRegex,
-  shouldIgnore
+  shouldIgnore,
 } = await import('../src/lib/source-analyzer');
 
 describe('Source Analyzer Module', () => {
@@ -256,10 +256,10 @@ path.join('/a', 'b');
     it('should scan directory for source files', () => {
       const rootEntries = [
         { name: 'src', isDirectory: () => true, isFile: () => false },
-        { name: 'index.js', isDirectory: () => false, isFile: () => true }
+        { name: 'index.js', isDirectory: () => false, isFile: () => true },
       ];
       const srcEntries = [
-        { name: 'app.ts', isDirectory: () => false, isFile: () => true }
+        { name: 'app.ts', isDirectory: () => false, isFile: () => true },
       ];
 
       mockReaddirSync
@@ -276,7 +276,7 @@ path.join('/a', 'b');
     it('should ignore node_modules', () => {
       const mockEntries = [
         { name: 'node_modules', isDirectory: () => true, isFile: () => false },
-        { name: 'index.js', isDirectory: () => false, isFile: () => true }
+        { name: 'index.js', isDirectory: () => false, isFile: () => true },
       ];
 
       mockReaddirSync.mockReturnValue(mockEntries as any);
@@ -290,7 +290,7 @@ path.join('/a', 'b');
     it('should respect gitignore patterns', () => {
       const mockEntries = [
         { name: 'dist', isDirectory: () => true, isFile: () => false },
-        { name: 'index.js', isDirectory: () => false, isFile: () => true }
+        { name: 'index.js', isDirectory: () => false, isFile: () => true },
       ];
 
       mockReaddirSync.mockReturnValue(mockEntries as any);
@@ -305,7 +305,7 @@ path.join('/a', 'b');
     it('should handle excludeDirs option', () => {
       const mockEntries = [
         { name: 'custom-ignore', isDirectory: () => true, isFile: () => false },
-        { name: 'index.js', isDirectory: () => false, isFile: () => true }
+        { name: 'index.js', isDirectory: () => false, isFile: () => true },
       ];
 
       mockReaddirSync.mockReturnValue(mockEntries as any);
@@ -319,7 +319,7 @@ path.join('/a', 'b');
     it('should disable gitignore when respectGitIgnore is false', () => {
       const mockEntries = [
         { name: 'dist', isDirectory: () => true, isFile: () => false },
-        { name: 'index.js', isDirectory: () => false, isFile: () => true }
+        { name: 'index.js', isDirectory: () => false, isFile: () => true },
       ];
 
       mockReaddirSync.mockReturnValue(mockEntries as any);
@@ -338,7 +338,7 @@ path.join('/a', 'b');
         { name: 'file.cjs', isDirectory: () => false, isFile: () => true },
         { name: 'file.ts', isDirectory: () => false, isFile: () => true },
         { name: 'file.tsx', isDirectory: () => false, isFile: () => true },
-        { name: 'file.txt', isDirectory: () => false, isFile: () => true }
+        { name: 'file.txt', isDirectory: () => false, isFile: () => true },
       ];
 
       mockReaddirSync.mockReturnValue(mockEntries as any);
@@ -354,11 +354,11 @@ path.join('/a', 'b');
       const rootEntries = [
         { name: 'src', isDirectory: () => true, isFile: () => false },
         { name: 'index.js', isDirectory: () => false, isFile: () => true },
-        { name: 'app.js', isDirectory: () => false, isFile: () => true }
+        { name: 'app.js', isDirectory: () => false, isFile: () => true },
       ];
       const srcEntries = [
         { name: 'utils.ts', isDirectory: () => false, isFile: () => true },
-        { name: 'helper.js', isDirectory: () => false, isFile: () => true }
+        { name: 'helper.js', isDirectory: () => false, isFile: () => true },
       ];
 
       mockReaddirSync
@@ -378,11 +378,11 @@ path.join('/a', 'b');
       const rootEntries = [
         { name: 'src', isDirectory: () => true, isFile: () => false },
         { name: 'index.js', isDirectory: () => false, isFile: () => true },
-        { name: 'test.spec.js', isDirectory: () => false, isFile: () => true }
+        { name: 'test.spec.js', isDirectory: () => false, isFile: () => true },
       ];
       const srcEntries = [
         { name: 'utils.ts', isDirectory: () => false, isFile: () => true },
-        { name: 'helper.test.js', isDirectory: () => false, isFile: () => true }
+        { name: 'helper.test.js', isDirectory: () => false, isFile: () => true },
       ];
 
       mockReaddirSync
@@ -402,11 +402,11 @@ path.join('/a', 'b');
       const rootEntries = [
         { name: 'src', isDirectory: () => true, isFile: () => false },
         { name: 'index.js', isDirectory: () => false, isFile: () => true },
-        { name: 'vendor.js', isDirectory: () => false, isFile: () => true }
+        { name: 'vendor.js', isDirectory: () => false, isFile: () => true },
       ];
       const srcEntries = [
         { name: 'utils.ts', isDirectory: () => false, isFile: () => true },
-        { name: 'vendor.ts', isDirectory: () => false, isFile: () => true }
+        { name: 'vendor.ts', isDirectory: () => false, isFile: () => true },
       ];
 
       mockReaddirSync
@@ -416,7 +416,7 @@ path.join('/a', 'b');
 
       const files = scanSourceFiles('/test/project', {
         includePatterns: ['src/**', '*.js'],
-        excludePatterns: ['**/vendor.*']
+        excludePatterns: ['**/vendor.*'],
       });
 
       expect(files).toContain('/test/project/index.js');
@@ -429,13 +429,13 @@ path.join('/a', 'b');
       const rootEntries = [
         { name: 'src', isDirectory: () => true, isFile: () => false },
         { name: 'lib', isDirectory: () => true, isFile: () => false },
-        { name: 'index.js', isDirectory: () => false, isFile: () => true }
+        { name: 'index.js', isDirectory: () => false, isFile: () => true },
       ];
       const srcEntries = [
-        { name: 'app.ts', isDirectory: () => false, isFile: () => true }
+        { name: 'app.ts', isDirectory: () => false, isFile: () => true },
       ];
       const libEntries = [
-        { name: 'utils.js', isDirectory: () => false, isFile: () => true }
+        { name: 'utils.js', isDirectory: () => false, isFile: () => true },
       ];
 
       mockReaddirSync

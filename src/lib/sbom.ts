@@ -76,7 +76,7 @@ interface PackageLock {
   data?: Record<string, { version?: string; resolved?: string }>;
 }
 
-export function detectMergeConflicts (content: string): MergeConflictResult {
+export function detectMergeConflicts(content: string): MergeConflictResult {
   const lines = content.split('\n');
   const conflicts: MergeConflict[] = [];
   let _inConflict = false;
@@ -99,7 +99,7 @@ export function detectMergeConflicts (content: string): MergeConflictResult {
   return { hasMergeConflict: conflicts.length > 0, conflicts };
 }
 
-export function formatMergeConflictError (filePath: string, conflicts: MergeConflict[]): string {
+export function formatMergeConflictError(filePath: string, conflicts: MergeConflict[]): string {
   let message = `Detectado merge conflict não resolvido em ${filePath}:\n\n`;
   conflicts.forEach((conflict, idx) => {
     message += `Conflito ${idx + 1}:\n`;
@@ -120,11 +120,11 @@ export function formatMergeConflictError (filePath: string, conflicts: MergeConf
   return message;
 }
 
-export function detectPackageManager (projectPath: string): PackageManager | null {
+export function detectPackageManager(projectPath: string): PackageManager | null {
   const lockFiles: Array<{ type: 'pnpm' | 'yarn' | 'npm'; name: string }> = [
     { type: 'pnpm', name: 'pnpm-lock.yaml' },
     { type: 'yarn', name: 'yarn.lock' },
-    { type: 'npm', name: 'package-lock.json' }
+    { type: 'npm', name: 'package-lock.json' },
   ];
 
   for (const { type, name } of lockFiles) {
@@ -137,7 +137,7 @@ export function detectPackageManager (projectPath: string): PackageManager | nul
   return null;
 }
 
-async function fetchNpmPackageInfo (packageName: string): Promise<NpmPackageInfo | null> {
+async function fetchNpmPackageInfo(packageName: string): Promise<NpmPackageInfo | null> {
   return new Promise<NpmPackageInfo | null>((resolve) => {
     const url = `https://registry.npmjs.org/${encodeURIComponent(packageName)}`;
     https.get(url, { timeout: 5000 }, (res) => {
@@ -158,10 +158,10 @@ async function fetchNpmPackageInfo (packageName: string): Promise<NpmPackageInfo
   });
 }
 
-export async function createSBOMFromPackageLock (
+export async function createSBOMFromPackageLock(
   packageLock: PackageLock,
   fetchRepoUrls: boolean = false,
-  omitTransitive: boolean = false
+  omitTransitive: boolean = false,
 ): Promise<SBOM> {
   const components: SBOMComponent[] = [];
   const packageNames: PackageEntry[] = [];
@@ -200,7 +200,7 @@ export async function createSBOMFromPackageLock (
       const deps: Record<string, string | PackageLockPackage> = {
         ...(importer.dependencies || {}),
         ...(importer.devDependencies || {}),
-        ...(importer.optionalDependencies || {})
+        ...(importer.optionalDependencies || {}),
       };
       for (const [name, depInfo] of Object.entries(deps)) {
         if (typeof depInfo === 'string') {
@@ -240,7 +240,7 @@ export async function createSBOMFromPackageLock (
         version,
         bomRef: `pkg:npm/${name}@${version}`,
         externalReferences: resolved ? [{ type: 'distribution', url: resolved }] : [],
-        ...(repoUrl ? { repository: { url: repoUrl } } : {})
+        ...(repoUrl ? { repository: { url: repoUrl } } : {}),
       });
     }
   } else {
@@ -250,7 +250,7 @@ export async function createSBOMFromPackageLock (
         name,
         version,
         bomRef: `pkg:npm/${name}@${version}`,
-        externalReferences: resolved ? [{ type: 'distribution', url: resolved }] : []
+        externalReferences: resolved ? [{ type: 'distribution', url: resolved }] : [],
       });
     }
   }
@@ -258,7 +258,7 @@ export async function createSBOMFromPackageLock (
   return { bomFormat: 'CycloneDX', specVersion: '1.4', version: 1, components };
 }
 
-export function findPackageLockPath (startDir: string): string | null {
+export function findPackageLockPath(startDir: string): string | null {
   let current = path.resolve(startDir);
   const root = path.parse(current).root;
   const lockFileNames = ['package-lock.json', 'pnpm-lock.yaml', 'yarn.lock'];
@@ -276,11 +276,11 @@ export function findPackageLockPath (startDir: string): string | null {
   return null;
 }
 
-export async function generateSBOM (
+export async function generateSBOM(
   projectPath: string,
   outputFile: string = 'sbom.cdx.json',
   fetchRepoUrls: boolean = false,
-  omitTransitive: boolean = false
+  omitTransitive: boolean = false,
 ): Promise<string> {
   const outputFilePath = path.resolve(projectPath, outputFile);
   const pm = detectPackageManager(projectPath);
@@ -310,8 +310,8 @@ export async function generateSBOM (
       {
         cwd: projectPath,
         stdio: 'pipe',
-        env: { ...process.env, FORCE_COLOR: '0' } as NodeJS.ProcessEnv
-      }
+        env: { ...process.env, FORCE_COLOR: '0' } as NodeJS.ProcessEnv,
+      },
     );
 
     const sbom: SBOM = JSON.parse(fs.readFileSync(outputFilePath, 'utf8'));
@@ -427,7 +427,7 @@ export async function generateSBOM (
   return outputFilePath;
 }
 
-export function readSBOM (sbomPath: string): SBOM {
+export function readSBOM(sbomPath: string): SBOM {
   const content = fs.readFileSync(sbomPath, 'utf8');
   try {
     return JSON.parse(content) as SBOM;
@@ -440,7 +440,7 @@ export function readSBOM (sbomPath: string): SBOM {
   }
 }
 
-export function extractComponents (sbom: Partial<SBOM>): ExtractedComponent[] {
+export function extractComponents(sbom: Partial<SBOM>): ExtractedComponent[] {
   const components = sbom.components || [];
   return components.map((component): ExtractedComponent => {
     let repoUrl: string | null = null;

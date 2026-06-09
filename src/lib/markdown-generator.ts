@@ -19,7 +19,7 @@ export interface WriteMarkdownOptions {
   projectRoot: string;
 }
 
-export function buildQueriesForUsage (libName: string, usage: LibraryUsage): string[] {
+export function buildQueriesForUsage(libName: string, usage: LibraryUsage): string[] {
   const queries: string[] = [];
   const libNames = normalizeLibraryNames(libName);
   for (const chain of usage.chains || []) {
@@ -50,7 +50,7 @@ export function buildQueriesForUsage (libName: string, usage: LibraryUsage): str
   return uniq(queries.filter(q => q && q.trim().length >= 2));
 }
 
-export function buildTermList (libName: string, usage: LibraryUsage): string[] {
+export function buildTermList(libName: string, usage: LibraryUsage): string[] {
   const terms = new Set<string>();
   for (const alias of normalizeLibraryNames(libName)) {
     terms.add(alias);
@@ -70,7 +70,7 @@ export function buildTermList (libName: string, usage: LibraryUsage): string[] {
   return [...terms].filter(Boolean);
 }
 
-export function collectTestFilesFromHorsebox (libsIndexDir: string | null, libsLineIndexDir: string | null, queries: string[]): string[] {
+export function collectTestFilesFromHorsebox(libsIndexDir: string | null, libsLineIndexDir: string | null, queries: string[]): string[] {
   const paths = new Set<string>();
   if (!libsIndexDir || !fs.existsSync(libsIndexDir)) {
     return [];
@@ -94,7 +94,7 @@ export function collectTestFilesFromHorsebox (libsIndexDir: string | null, libsL
   return [...paths];
 }
 
-export function shortenPath (fullPath: string | null, projectRoot: string): string {
+export function shortenPath(fullPath: string | null, projectRoot: string): string {
   if (!fullPath) {
     return '';
   }
@@ -105,7 +105,7 @@ export function shortenPath (fullPath: string | null, projectRoot: string): stri
   return rel;
 }
 
-export async function writeMarkdownForSource ({ sourceFile, usage, outputFile, libsIndexDir, libsLineIndexDir, projectRoot }: WriteMarkdownOptions): Promise<void> {
+export async function writeMarkdownForSource({ sourceFile, usage, outputFile, libsIndexDir, libsLineIndexDir, projectRoot }: WriteMarkdownOptions): Promise<void> {
   const shortSource = shortenPath(sourceFile, projectRoot);
   let md = `# External tests for ${path.basename(sourceFile)}\n\n`;
   md += `**Arquivo:** \`${shortSource}\`\n\n`;

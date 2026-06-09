@@ -4,31 +4,31 @@ import os from 'os';
 import { execSync, spawnSync } from 'child_process';
 
 import { describe, it, expect, beforeAll, afterAll } from 'bun:test';
+import type { AnalyzeResult } from '../src/index';
 
 const { analyze } = await import('../src/index');
-import type { AnalyzeResult } from '../src/index';
 const {
   generateSBOM,
   readSBOM,
   extractComponents,
-  createSBOMFromPackageLock
+  createSBOMFromPackageLock,
 } = await import('../src/lib/sbom');
 const {
   downloadRepos,
-  parseRepoUrl
+  parseRepoUrl,
 } = await import('../src/lib/repo-downloader');
 const {
   analyzeSourceFile,
-  scanSourceFiles
+  scanSourceFiles,
 } = await import('../src/lib/source-analyzer');
 const {
   ensureHorsebox,
   buildFileContentIndex,
   buildFileLineIndex,
-  searchIndex
+  searchIndex,
 } = await import('../src/lib/horsebox');
 const {
-  writeMarkdownForSource
+  writeMarkdownForSource,
 } = await import('../src/lib/markdown-generator');
 
 describe('index.js - Main Module', () => {
@@ -68,7 +68,7 @@ describe('index.js - Main Module', () => {
       }
 
       const result: AnalyzeResult = await analyze(testProjectPath, {
-        sbomPath: 'test-sbom-temp.json'
+        sbomPath: 'test-sbom-temp.json',
       });
 
       expect(result).toBeDefined();
@@ -85,7 +85,7 @@ describe('index.js - Main Module', () => {
 
       const result: AnalyzeResult = await analyze(testProjectPath, {
         sourceFile: 'index.js',
-        sbomPath: 'test-sbom-single.json'
+        sbomPath: 'test-sbom-single.json',
       });
 
       expect(result).toBeDefined();
@@ -102,7 +102,7 @@ describe('index.js - Main Module', () => {
       const result: AnalyzeResult = await analyze(testProjectPath, {
         downloadDependencies: true,
         maxDownloads: 2,
-        sbomPath: 'test-sbom-limited.json'
+        sbomPath: 'test-sbom-limited.json',
       });
 
       expect(result).toBeDefined();
@@ -146,12 +146,12 @@ describe('SBOM Module Integration', () => {
       name: 'test-project',
       version: '1.0.0',
       dependencies: {
-        lodash: '^4.17.21'
-      }
+        lodash: '^4.17.21',
+      },
     };
     fs.writeFileSync(
       path.join(tempProjectPath, 'package.json'),
-      JSON.stringify(packageJson, null, 2)
+      JSON.stringify(packageJson, null, 2),
     );
     const packageLock = {
       name: 'test-project',
@@ -160,18 +160,18 @@ describe('SBOM Module Integration', () => {
       packages: {
         '': {
           name: 'test-project',
-          version: '1.0.0'
+          version: '1.0.0',
         },
         'node_modules/lodash': {
           name: 'lodash',
           version: '4.17.21',
-          resolved: 'https://registry.npmjs.org/lodash/-/lodash-4.17.21.tgz'
-        }
-      }
+          resolved: 'https://registry.npmjs.org/lodash/-/lodash-4.17.21.tgz',
+        },
+      },
     };
     fs.writeFileSync(
       path.join(tempProjectPath, 'package-lock.json'),
-      JSON.stringify(packageLock, null, 2)
+      JSON.stringify(packageLock, null, 2),
     );
   });
 
@@ -218,14 +218,14 @@ describe('SBOM Module Integration', () => {
       packages: {
         '': {
           name: 'test-project',
-          version: '1.0.0'
+          version: '1.0.0',
         },
         'node_modules/lodash': {
           name: 'lodash',
           version: '4.17.21',
-          resolved: 'https://registry.npmjs.org/lodash/-/lodash-4.17.21.tgz'
-        }
-      }
+          resolved: 'https://registry.npmjs.org/lodash/-/lodash-4.17.21.tgz',
+        },
+      },
     };
 
     const sbom = await createSBOMFromPackageLock(packageLock, false);
@@ -240,9 +240,9 @@ describe('SBOM Module Integration', () => {
       packages: {
         'node_modules/lodash': {
           name: 'lodash',
-          version: '4.17.21'
-        }
-      }
+          version: '4.17.21',
+        },
+      },
     };
 
     const sbom = await createSBOMFromPackageLock(packageLock, true);
@@ -256,16 +256,16 @@ describe('Repo Downloader Integration', () => {
     const testCases = [
       {
         input: 'https://github.com/lodash/lodash',
-        expected: { gitUrl: 'https://github.com/lodash/lodash.git', ref: null as string | null }
+        expected: { gitUrl: 'https://github.com/lodash/lodash.git', ref: null as string | null },
       },
       {
         input: 'git@github.com:lodash/lodash.git',
-        expected: { gitUrl: 'https://github.com/lodash/lodash.git', ref: null as string | null }
+        expected: { gitUrl: 'https://github.com/lodash/lodash.git', ref: null as string | null },
       },
       {
         input: 'https://github.com/expressjs/express#4.18.0',
-        expected: { gitUrl: 'https://github.com/expressjs/express.git', ref: 'v4.18.0' as string | null }
-      }
+        expected: { gitUrl: 'https://github.com/expressjs/express.git', ref: 'v4.18.0' as string | null },
+      },
     ];
 
     testCases.forEach(({ input, expected }) => {
@@ -284,8 +284,8 @@ describe('Repo Downloader Integration', () => {
       {
         name: 'lodash',
         version: '4.17.21',
-        repo_url: 'https://github.com/lodash/lodash'
-      }
+        repo_url: 'https://github.com/lodash/lodash',
+      },
     ];
 
     const result = await downloadRepos(components);
@@ -299,8 +299,8 @@ describe('Repo Downloader Integration', () => {
       {
         name: 'test-pkg',
         version: '1.0.0',
-        repo_url: null as string | null
-      }
+        repo_url: null as string | null,
+      },
     ];
 
     const result = await downloadRepos(components);
@@ -314,8 +314,8 @@ describe('Repo Downloader Integration', () => {
       {
         name: 'lodash',
         version: '4.17.21',
-        repo_url: 'https://github.com/lodash/lodash'
-      }
+        repo_url: 'https://github.com/lodash/lodash',
+      },
     ];
 
     const result = await downloadRepos(components, { baseDir: customDir });
@@ -539,8 +539,8 @@ test('should generate SBOM', () => {
       './lib/sbom': {
         functions: ['generateSBOM'],
         members: {} as Record<string, string[]>,
-        chains: [] as string[]
-      }
+        chains: [] as string[],
+      },
     };
 
     await writeMarkdownForSource({
@@ -549,7 +549,7 @@ test('should generate SBOM', () => {
       outputFile,
       libsIndexDir,
       libsLineIndexDir,
-      projectRoot: tempDir
+      projectRoot: tempDir,
     });
 
     expect(fs.existsSync(outputFile)).toBe(true);
@@ -568,7 +568,7 @@ test('should generate SBOM', () => {
       outputFile,
       libsIndexDir,
       libsLineIndexDir,
-      projectRoot: tempDir
+      projectRoot: tempDir,
     });
 
     expect(fs.existsSync(outputFile)).toBe(true);
@@ -583,8 +583,8 @@ test('should generate SBOM', () => {
       path: {
         functions: ['resolve', 'join'],
         members: {} as Record<string, string[]>,
-        chains: ['resolve']
-      }
+        chains: ['resolve'],
+      },
     };
 
     await writeMarkdownForSource({
@@ -593,7 +593,7 @@ test('should generate SBOM', () => {
       outputFile,
       libsIndexDir: '/non-existent-index',
       libsLineIndexDir: '/non-existent-index-line',
-      projectRoot: tempDir
+      projectRoot: tempDir,
     });
 
     expect(fs.existsSync(outputFile)).toBe(true);
@@ -611,7 +611,7 @@ describe('End-to-End Integration', () => {
 
     const result = await analyze(testProjectPath, {
       sbomPath: 'sbom-e2e.json',
-      downloadDependencies: false
+      downloadDependencies: false,
     });
 
     expect(result).toBeDefined();
@@ -663,7 +663,7 @@ describe('child_process module tests (from index.js.md)', () => {
   it('should use execSync with stdio option', () => {
     const result = execSync('echo "hello"', {
       encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe']
+      stdio: ['ignore', 'pipe', 'pipe'],
     });
     expect(result.trim()).toBe('hello');
   });
@@ -677,21 +677,21 @@ describe('child_process module tests (from index.js.md)', () => {
   it('should handle spawnSync with timeout', () => {
     const result = spawnSync('sleep', ['0.1'], {
       encoding: 'utf8',
-      timeout: 5000
+      timeout: 5000,
     });
     expect(result.status).toBe(0);
   });
 
   it('should capture stderr from spawned process', () => {
     const result = spawnSync('node', ['-e', 'console.error("error message")'], {
-      encoding: 'utf8'
+      encoding: 'utf8',
     });
     expect(result.stderr!.trim()).toBe('error message');
   });
 
   it('should handle non-zero exit codes', () => {
     const result = spawnSync('node', ['-e', 'process.exit(1)'], {
-      encoding: 'utf8'
+      encoding: 'utf8',
     });
     expect(result.status).toBe(1);
   });
@@ -823,7 +823,7 @@ describe('Integration tests for index.js main functionality', () => {
         sbomPath: 'sbom-integration.json',
         downloadDependencies: true,
         maxDownloads: 1,
-        downloadDir: customDownloadDir
+        downloadDir: customDownloadDir,
       });
 
       expect(result).toBeDefined();
@@ -856,7 +856,7 @@ describe('Integration tests for index.js main functionality', () => {
         sbomPath: 'sbom-first.json',
         downloadDependencies: true,
         maxDownloads: 1,
-        downloadDir: customDownloadDir
+        downloadDir: customDownloadDir,
       });
 
       const horseboxDir = path.join(customDownloadDir, '.horsebox');
@@ -866,7 +866,7 @@ describe('Integration tests for index.js main functionality', () => {
         sbomPath: 'sbom-second.json',
         downloadDependencies: true,
         maxDownloads: 1,
-        downloadDir: customDownloadDir
+        downloadDir: customDownloadDir,
       });
 
       expect(result).toBeDefined();

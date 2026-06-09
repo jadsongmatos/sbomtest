@@ -5,7 +5,7 @@ interface TestBlock {
   code: string;
 }
 
-export function findMatchingBrace (code: string, openIndex: number): number {
+export function findMatchingBrace(code: string, openIndex: number): number {
   let depth = 0;
   let quote: string | null = null;
   let escaped = false;
@@ -38,7 +38,7 @@ export function findMatchingBrace (code: string, openIndex: number): number {
   return -1;
 }
 
-export function extractTestBlocks (content: string): TestBlock[] {
+export function extractTestBlocks(content: string): TestBlock[] {
   const blocks: TestBlock[] = [];
   const re = /\b(?:test|it)\s*\(\s*(['"`])([\s\S]*?)\1\s*,[\s\S]*?\{/g;
   let match: RegExpExecArray | null;
@@ -60,12 +60,12 @@ export function extractTestBlocks (content: string): TestBlock[] {
   return blocks;
 }
 
-export function blockMatchesTerms (blockCode: string, terms: string[]): boolean {
+export function blockMatchesTerms(blockCode: string, terms: string[]): boolean {
   const lower = blockCode.toLowerCase();
   return terms.some(term => lower.includes(term.toLowerCase()));
 }
 
-export function extractRelevantBlocksFromFile (filePath: string, terms: string[]): TestBlock[] {
+export function extractRelevantBlocksFromFile(filePath: string, terms: string[]): TestBlock[] {
   const content = safeReadFile(filePath);
   if (!content) {
     return [];

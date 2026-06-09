@@ -10,7 +10,7 @@ mock.module('../src/lib/utils', () => ({
 
 const {
   extractTestBlocks,
-  extractRelevantBlocksFromFile
+  extractRelevantBlocksFromFile,
 } = await import('../src/lib/test-extractor');
 
 describe('Test Extractor Module', () => {

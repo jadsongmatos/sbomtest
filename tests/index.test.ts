@@ -3,6 +3,7 @@ import path from 'path';
 import { execSync } from 'child_process';
 
 import { describe, it, expect } from 'bun:test';
+import type { AnalyzeResult } from '../src/index';
 
 let horseboxAvailable = false;
 try {
@@ -13,7 +14,6 @@ try {
 }
 
 const { analyze } = await import('../src/index');
-import type { AnalyzeResult } from '../src/index';
 
 describe('Main Module', () => {
   const testProjectPath = path.join(__dirname, 'fixtures', 'test-project');

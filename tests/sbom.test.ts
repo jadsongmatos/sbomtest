@@ -28,15 +28,15 @@ const fsMock = {
   unlinkSync: mockUnlinkSync,
   statSync: mockStatSync,
 };
-mock.module('fs', () => ({ ...fsMock, default: fsMock }));
+mock.module('fs', () => ({ ...fsMock, 'default': fsMock }));
 
 const mockExecSync = mock();
 const childProcessMock = { ...actualChildProcess, execSync: mockExecSync };
-mock.module('child_process', () => ({ ...childProcessMock, default: childProcessMock }));
+mock.module('child_process', () => ({ ...childProcessMock, 'default': childProcessMock }));
 
 const mockHttpsGet = mock();
 const httpsMock = { ...actualHttps, get: mockHttpsGet };
-mock.module('https', () => ({ ...httpsMock, default: httpsMock }));
+mock.module('https', () => ({ ...httpsMock, 'default': httpsMock }));
 
 const {
   generateSBOM,
@@ -45,7 +45,7 @@ const {
   createSBOMFromPackageLock,
   detectPackageManager,
   detectMergeConflicts,
-  formatMergeConflictError
+  formatMergeConflictError,
 } = await import('../src/lib/sbom');
 
 describe('SBOM Module', () => {
@@ -79,7 +79,7 @@ describe('SBOM Module', () => {
         return JSON.stringify({
           bomFormat: 'CycloneDX',
           specVersion: '1.4',
-          components: [{ name: 'express', version: '4.18.0' }]
+          components: [{ name: 'express', version: '4.18.0' }],
         });
       }
       if (fp.endsWith('package.json')) {
@@ -90,8 +90,8 @@ describe('SBOM Module', () => {
           lockfileVersion: 2,
           packages: {
             '': { name: 'root', version: '1.0.0' },
-            'node_modules/express': { name: 'express', version: '4.18.0' }
-          }
+            'node_modules/express': { name: 'express', version: '4.18.0' },
+          },
         });
       }
       return '';
@@ -107,19 +107,19 @@ describe('SBOM Module', () => {
             name: 'root',
             version: '1.0.0',
             dependencies: {
-              express: '4.18.0'
-            }
+              express: '4.18.0',
+            },
           },
           'node_modules/express': {
             name: 'express',
             version: '4.18.0',
-            resolved: 'https://registry.npmjs.org/express/-/express-4.18.0.tgz'
+            resolved: 'https://registry.npmjs.org/express/-/express-4.18.0.tgz',
           },
           'node_modules/lodash': {
             name: 'lodash',
-            version: '4.17.21'
-          }
-        }
+            version: '4.17.21',
+          },
+        },
       };
 
       const sbom = await createSBOMFromPackageLock(packageLock);
@@ -137,18 +137,18 @@ describe('SBOM Module', () => {
         packages: {
           '': {
             dependencies: {
-              express: '4.18.0'
-            }
+              express: '4.18.0',
+            },
           },
           'node_modules/express': {
             name: 'express',
-            version: '4.18.0'
+            version: '4.18.0',
           },
           'node_modules/accepts': {
             name: 'accepts',
-            version: '1.3.8'
-          }
-        }
+            version: '1.3.8',
+          },
+        },
       };
 
       const sbom = await createSBOMFromPackageLock(packageLock, false, true);
@@ -160,7 +160,7 @@ describe('SBOM Module', () => {
     it('should handle empty packages', async () => {
       const packageLock = {
         lockfileVersion: 2,
-        packages: {}
+        packages: {},
       };
 
       const sbom = await createSBOMFromPackageLock(packageLock);
@@ -173,9 +173,9 @@ describe('SBOM Module', () => {
         lockfileVersion: 2,
         packages: {
           'node_modules/express': {
-            version: '4.18.0'
-          }
-        }
+            version: '4.18.0',
+          },
+        },
       };
 
       const sbom = await createSBOMFromPackageLock(packageLock);
@@ -190,9 +190,9 @@ describe('SBOM Module', () => {
         packages: {
           '': {
             name: 'root',
-            version: '1.0.0'
-          }
-        }
+            version: '1.0.0',
+          },
+        },
       };
 
       const sbom = await createSBOMFromPackageLock(packageLock);
@@ -206,30 +206,30 @@ describe('SBOM Module', () => {
         importers: {
           '.': {
             dependencies: {
-              'express': {
+              express: {
                 specifier: '^4.18.0',
-                version: '4.18.2'
+                version: '4.18.2',
               },
-              'lodash': {
+              lodash: {
                 specifier: '^4.17.21',
-                version: '4.17.21'
-              }
+                version: '4.17.21',
+              },
             },
             devDependencies: {
-              'jest': {
+              jest: {
                 specifier: '^29.0.0',
-                version: '29.7.0'
-              }
-            }
-          }
-        }
+                version: '29.7.0',
+              },
+            },
+          },
+        },
       };
 
       const sbom = await createSBOMFromPackageLock(packageLock);
 
       expect(sbom.components).toHaveLength(3);
       expect(sbom.components.map(c => c.name)).toEqual(
-        expect.arrayContaining(['express', 'lodash', 'jest'])
+        expect.arrayContaining(['express', 'lodash', 'jest']),
       );
     });
 
@@ -239,11 +239,11 @@ describe('SBOM Module', () => {
         importers: {
           '.': {
             dependencies: {
-              'express': '4.18.2',
-              'lodash': '4.17.21'
-            }
-          }
-        }
+              express: '4.18.2',
+              lodash: '4.17.21',
+            },
+          },
+        },
       };
 
       const sbom = await createSBOMFromPackageLock(packageLock);
@@ -259,17 +259,17 @@ describe('SBOM Module', () => {
         importers: {
           '.': {
             dependencies: {
-              'express': {
+              express: {
                 specifier: '^4.18.0',
-                version: '4.18.2'
+                version: '4.18.2',
               },
-              'lodash': {
+              lodash: {
                 specifier: '^4.17.21',
-                version: '4.17.21'
-              }
-            }
-          }
-        }
+                version: '4.17.21',
+              },
+            },
+          },
+        },
       };
 
       const sbom = await createSBOMFromPackageLock(packageLock, false, true);
@@ -327,8 +327,8 @@ describe('SBOM Module', () => {
         bomFormat: 'CycloneDX',
         specVersion: '1.4',
         components: [
-          { name: 'express', version: '4.18.0' }
-        ]
+          { name: 'express', version: '4.18.0' },
+        ],
       };
 
       mockExistsSync.mockImplementation((filePath: unknown) => {
@@ -342,7 +342,7 @@ describe('SBOM Module', () => {
 
       expect(mockExecSync).toHaveBeenCalledWith(
         expect.stringContaining('npx @cyclonedx/cyclonedx-npm'),
-        expect.any(Object)
+        expect.any(Object),
       );
       expect(result).toBe(testSBOMPath);
     });
@@ -353,8 +353,8 @@ describe('SBOM Module', () => {
         specVersion: '1.4',
         components: [
           { name: 'express', version: '4.18.0' },
-          { name: 'lodash', version: '4.17.21' }
-        ]
+          { name: 'lodash', version: '4.17.21' },
+        ],
       };
 
       mockExistsSync.mockImplementation((filePath: unknown) => {
@@ -370,7 +370,7 @@ describe('SBOM Module', () => {
 
       expect(mockExecSync).toHaveBeenCalledWith(
         expect.stringContaining('--omit dev --omit optional --omit peer'),
-        expect.any(Object)
+        expect.any(Object),
       );
     });
 
@@ -379,14 +379,14 @@ describe('SBOM Module', () => {
         bomFormat: 'CycloneDX',
         specVersion: '1.4',
         components: [
-          { name: 'express', version: '4.18.0' }
-        ]
+          { name: 'express', version: '4.18.0' },
+        ],
       };
 
       const mockPackageInfo = {
         repository: {
-          url: 'https://github.com/expressjs/express'
-        }
+          url: 'https://github.com/expressjs/express',
+        },
       };
 
       mockExistsSync.mockImplementation((filePath: unknown) => {
@@ -405,7 +405,7 @@ describe('SBOM Module', () => {
             on: (event: string, handler: (data?: string) => void) => {
               if (event === 'data') { handler(JSON.stringify(mockPackageInfo)); }
               if (event === 'end') { handler(); }
-            }
+            },
           });
         });
         return req;
@@ -421,8 +421,8 @@ describe('SBOM Module', () => {
         bomFormat: 'CycloneDX',
         specVersion: '1.4',
         components: [
-          { name: 'express', version: '4.18.0' }
-        ]
+          { name: 'express', version: '4.18.0' },
+        ],
       };
 
       mockExistsSync.mockImplementation((filePath: unknown) => {
@@ -473,7 +473,7 @@ describe('SBOM Module', () => {
       const mockSBOM = {
         bomFormat: 'CycloneDX',
         specVersion: '1.4',
-        components: []
+        components: [],
       };
 
       mockReadFileSync.mockReturnValue(JSON.stringify(mockSBOM));
@@ -493,10 +493,10 @@ describe('SBOM Module', () => {
             name: 'express',
             version: '4.18.0',
             externalReferences: [
-              { type: 'vcs', url: 'https://github.com/expressjs/express' }
-            ]
-          }
-        ]
+              { type: 'vcs', url: 'https://github.com/expressjs/express' },
+            ],
+          },
+        ],
       };
 
       const components = extractComponents(sbom);
@@ -505,7 +505,7 @@ describe('SBOM Module', () => {
       expect(components[0]).toEqual({
         name: 'express',
         version: '4.18.0',
-        repo_url: 'https://github.com/expressjs/express'
+        repo_url: 'https://github.com/expressjs/express',
       });
     });
 
@@ -515,9 +515,9 @@ describe('SBOM Module', () => {
           {
             name: 'lodash',
             version: '4.17.21',
-            repository: { url: 'https://github.com/lodash/lodash' }
-          }
-        ]
+            repository: { url: 'https://github.com/lodash/lodash' },
+          },
+        ],
       };
 
       const components = extractComponents(sbom);
@@ -533,10 +533,10 @@ describe('SBOM Module', () => {
             name: 'pkg',
             version: '1.0.0',
             externalReferences: [
-              { type: 'vcs', url: 'git+https://github.com/user/repo.git' }
-            ]
-          }
-        ]
+              { type: 'vcs', url: 'git+https://github.com/user/repo.git' },
+            ],
+          },
+        ],
       };
 
       const components = extractComponents(sbom);
@@ -549,9 +549,9 @@ describe('SBOM Module', () => {
         components: [
           {
             name: 'internal-pkg',
-            version: '1.0.0'
-          }
-        ]
+            version: '1.0.0',
+          },
+        ],
       };
 
       const components = extractComponents(sbom);
@@ -562,7 +562,7 @@ describe('SBOM Module', () => {
 
     it('should handle empty components', () => {
       const sbom = {
-        components: []
+        components: [],
       };
 
       const components = extractComponents(sbom);
@@ -585,11 +585,11 @@ describe('SBOM Module', () => {
             name: 'pkg',
             version: '1.0.0',
             externalReferences: [
-              { type: 'vcs', url: 'https://github.com/primary/repo' }
+              { type: 'vcs', url: 'https://github.com/primary/repo' },
             ],
-            repository: { url: 'https://github.com/secondary/repo' }
-          }
-        ]
+            repository: { url: 'https://github.com/secondary/repo' },
+          },
+        ],
       };
 
       const components = extractComponents(sbom);
@@ -681,8 +681,8 @@ describe('SBOM Module', () => {
           start: 3,
           marker: '<<<<<<< HEAD',
           separator: 5,
-          end: 7
-        }
+          end: 7,
+        },
       ];
 
       const message = formatMergeConflictError(filePath, conflicts);
@@ -700,7 +700,7 @@ describe('SBOM Module', () => {
       const filePath = '/path/to/pnpm-lock.yaml';
       const conflicts = [
         { start: 3, marker: '<<<<<<< HEAD', separator: 5, end: 7 },
-        { start: 10, marker: '<<<<<<< HEAD', separator: 12, end: 14 }
+        { start: 10, marker: '<<<<<<< HEAD', separator: 12, end: 14 },
       ];
 
       const message = formatMergeConflictError(filePath, conflicts);

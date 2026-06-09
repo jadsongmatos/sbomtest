@@ -23,7 +23,7 @@ const {
   writeMarkdownForSource,
   buildQueriesForUsage,
   buildTermList,
-  shortenPath
+  shortenPath,
 } = await import('../src/lib/markdown-generator');
 
 describe('Markdown Generator Module', () => {
@@ -49,7 +49,7 @@ describe('Markdown Generator Module', () => {
       const usage = {
         functions: [],
         members: {},
-        chains: ['prisma.component.upsert', 'db.find']
+        chains: ['prisma.component.upsert', 'db.find'],
       };
 
       const queries = buildQueriesForUsage('prisma', usage);
@@ -62,7 +62,7 @@ describe('Markdown Generator Module', () => {
       const usage = {
         functions: ['connect', 'disconnect'],
         members: {},
-        chains: []
+        chains: [],
       };
 
       const queries = buildQueriesForUsage('pg', usage);
@@ -76,9 +76,9 @@ describe('Markdown Generator Module', () => {
       const usage = {
         functions: [],
         members: {
-          client: ['query', 'execute']
+          client: ['query', 'execute'],
         },
-        chains: []
+        chains: [],
       };
 
       const queries = buildQueriesForUsage('pg', usage);
@@ -92,7 +92,7 @@ describe('Markdown Generator Module', () => {
       const usage = {
         chains: ['lib.fn', 'lib.fn'],
         functions: ['fn'],
-        members: {}
+        members: {},
       };
 
       const queries = buildQueriesForUsage('lib', usage);
@@ -104,7 +104,7 @@ describe('Markdown Generator Module', () => {
       const usage = {
         functions: ['a', 'abc'],
         members: {},
-        chains: []
+        chains: [],
       };
 
       const queries = buildQueriesForUsage('lib', usage);
@@ -130,7 +130,7 @@ describe('Markdown Generator Module', () => {
       const usage = {
         functions: [],
         members: {},
-        chains: ['prisma.user.find']
+        chains: ['prisma.user.find'],
       };
 
       const terms = buildTermList('prisma', usage);
@@ -144,7 +144,7 @@ describe('Markdown Generator Module', () => {
       const usage = {
         functions: ['connect', 'query'],
         members: {},
-        chains: []
+        chains: [],
       };
 
       const terms = buildTermList('pg', usage);
@@ -156,9 +156,9 @@ describe('Markdown Generator Module', () => {
       const usage = {
         functions: [],
         members: {
-          client: ['execute', 'release']
+          client: ['execute', 'release'],
         },
-        chains: []
+        chains: [],
       };
 
       const terms = buildTermList('pg', usage);
@@ -214,7 +214,7 @@ describe('Markdown Generator Module', () => {
         outputFile,
         libsIndexDir: '/index',
         libsLineIndexDir: '/index-line',
-        projectRoot: '/project'
+        projectRoot: '/project',
       });
 
       const content = fs.readFileSync(outputFile, 'utf8');
@@ -226,7 +226,7 @@ describe('Markdown Generator Module', () => {
       const outputFile = path.join(testOutputDir, 'usage.md');
       mockSearchIndex.mockReturnValue([{ path: '/test/test.test.js' }]);
       mockExtractRelevantBlocksFromFile.mockReturnValue([
-        { title: 'should work', code: 'test("should work", () => {})' }
+        { title: 'should work', code: 'test("should work", () => {})' },
       ]);
 
       await writeMarkdownForSource({
@@ -235,13 +235,13 @@ describe('Markdown Generator Module', () => {
           prisma: {
             chains: ['prisma.user.find'],
             functions: ['connect'],
-            members: {}
-          }
+            members: {},
+          },
         },
         outputFile,
         libsIndexDir: testOutputDir,
         libsLineIndexDir: testOutputDir,
-        projectRoot: '/project'
+        projectRoot: '/project',
       });
 
       const content = fs.readFileSync(outputFile, 'utf8');
@@ -255,12 +255,12 @@ describe('Markdown Generator Module', () => {
       await writeMarkdownForSource({
         sourceFile: '/project/src/app.js',
         usage: {
-          lib: { chains: [], functions: [], members: {} }
+          lib: { chains: [], functions: [], members: {} },
         },
         outputFile,
         libsIndexDir: null,
         libsLineIndexDir: null,
-        projectRoot: '/project'
+        projectRoot: '/project',
       });
 
       const content = fs.readFileSync(outputFile, 'utf8');
@@ -274,12 +274,12 @@ describe('Markdown Generator Module', () => {
         sourceFile: '/project/src/app.js',
         usage: {
           lib1: { chains: [], functions: [], members: {} },
-          lib2: { chains: [], functions: [], members: {} }
+          lib2: { chains: [], functions: [], members: {} },
         },
         outputFile,
         libsIndexDir: testOutputDir,
         libsLineIndexDir: testOutputDir,
-        projectRoot: '/project'
+        projectRoot: '/project',
       });
 
       const content = fs.readFileSync(outputFile, 'utf8');
@@ -293,18 +293,18 @@ describe('Markdown Generator Module', () => {
       mockSearchIndex.mockReturnValue([{ path: '/test/test.test.js' }]);
       mockExtractRelevantBlocksFromFile.mockReturnValue([
         { title: 'same test', code: 'test("same", () => {})' },
-        { title: 'same test', code: 'test("same", () => {})' }
+        { title: 'same test', code: 'test("same", () => {})' },
       ]);
 
       await writeMarkdownForSource({
         sourceFile: '/project/src/app.js',
         usage: {
-          lib: { chains: ['lib.fn'], functions: [], members: {} }
+          lib: { chains: ['lib.fn'], functions: [], members: {} },
         },
         outputFile,
         libsIndexDir: testOutputDir,
         libsLineIndexDir: testOutputDir,
-        projectRoot: '/project'
+        projectRoot: '/project',
       });
 
       const content = fs.readFileSync(outputFile, 'utf8');
@@ -316,18 +316,18 @@ describe('Markdown Generator Module', () => {
       const outputFile = path.join(testOutputDir, 'work.md');
       mockSearchIndex.mockReturnValue([{ path: '/tmp/sbomtest-work-abc/lib-name/tests/test.test.js' }]);
       mockExtractRelevantBlocksFromFile.mockReturnValue([
-        { title: 'test', code: 'test("test", () => {})' }
+        { title: 'test', code: 'test("test", () => {})' },
       ]);
 
       await writeMarkdownForSource({
         sourceFile: '/project/src/app.js',
         usage: {
-          lib: { chains: ['lib.fn'], functions: [], members: {} }
+          lib: { chains: ['lib.fn'], functions: [], members: {} },
         },
         outputFile,
         libsIndexDir: testOutputDir,
         libsLineIndexDir: testOutputDir,
-        projectRoot: '/project'
+        projectRoot: '/project',
       });
 
       const content = fs.readFileSync(outputFile, 'utf8');

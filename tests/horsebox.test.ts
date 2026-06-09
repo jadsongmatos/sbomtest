@@ -19,7 +19,7 @@ const childProcessMock = {
   ...actualChildProcess,
   execFileSync: execFileSyncMock,
 };
-mock.module('child_process', () => ({ ...childProcessMock, default: childProcessMock }));
+mock.module('child_process', () => ({ ...childProcessMock, 'default': childProcessMock }));
 
 const { clearSearchCache } = await import('../src/lib/horsebox');
 
@@ -82,7 +82,7 @@ describe('Horsebox Module', () => {
         'build',
         '--from', fromDir,
         '--index', indexDir,
-        '--using', 'filecontent'
+        '--using', 'filecontent',
       ], expect.objectContaining({
         encoding: 'utf8',
       }));
@@ -103,7 +103,7 @@ describe('Horsebox Module', () => {
         'build',
         '--from', fromDir,
         '--index', indexDir,
-        '--using', 'fileline'
+        '--using', 'fileline',
       ], expect.objectContaining({
         encoding: 'utf8',
       }));
@@ -160,7 +160,7 @@ describe('Horsebox Module', () => {
         '--index', testIndexDir,
         '--query', 'myQuery',
         '--json',
-        '--limit', '25'
+        '--limit', '25',
       ], expect.objectContaining({
         encoding: 'utf8',
       }));
@@ -177,7 +177,7 @@ describe('Horsebox Module', () => {
         '--index', testIndexDir,
         '--query', 'query',
         '--json',
-        '--limit', '30'
+        '--limit', '30',
       ], expect.any(Object));
     });
 

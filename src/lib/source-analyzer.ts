@@ -165,13 +165,13 @@ export function analyzeSourceFile(filePath: string): Record<string, LibraryUsage
         'logicalAssignment',
         'numericSeparator',
         'optionalCatchBinding',
-        'throwExpressions'
+        'throwExpressions',
       ],
       allowAwaitOutsideFunction: true,
       allowImportExportEverywhere: true,
       allowReturnOutsideFunction: true,
       allowSuperOutsideMethod: true,
-      allowUndeclaredExports: true
+      allowUndeclaredExports: true,
     });
   } catch (error: any) {
     console.warn(`Warning: Could not parse ${filePath}: ${error.message}`);
@@ -271,7 +271,7 @@ export function analyzeSourceFile(filePath: string): Record<string, LibraryUsage
     result[libName] = {
       functions: Array.from(data.functions),
       members: {},
-      chains: Array.from(data.chains)
+      chains: Array.from(data.chains),
     };
     for (const [memberName, funcs] of Object.entries(data.members)) {
       result[libName].members[memberName] = Array.from(funcs);
@@ -285,7 +285,7 @@ export function scanSourceFiles(dir: string, options: ScanOptions = {}): string[
     respectGitIgnore = true,
     excludeDirs = [],
     includePatterns = null,
-    excludePatterns = null
+    excludePatterns = null,
   } = options;
   const sourceFiles: string[] = [];
   const gitIgnorePatterns = respectGitIgnore ? getGitIgnorePatterns(dir) : [];

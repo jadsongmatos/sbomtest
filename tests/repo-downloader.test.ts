@@ -1,12 +1,14 @@
 import fs from 'fs';
 import path from 'path';
 
+import { describe, it, expect, beforeEach, afterEach, mock, spyOn } from 'bun:test';
+
 const actualChildProcess = await import('child_process');
 const actualUtils = await import('../src/lib/utils');
 
 const mockSpawn = mock();
 const childProcessMock = { ...actualChildProcess, spawn: mockSpawn };
-mock.module('child_process', () => ({ ...childProcessMock, default: childProcessMock }));
+mock.module('child_process', () => ({ ...childProcessMock, 'default': childProcessMock }));
 
 const mockGetCacheDir = mock();
 mock.module('../src/lib/utils', () => ({
@@ -15,8 +17,6 @@ mock.module('../src/lib/utils', () => ({
 }));
 
 const { downloadRepos, parseRepoUrl } = await import('../src/lib/repo-downloader');
-
-import { describe, it, expect, beforeEach, afterEach, mock, spyOn } from 'bun:test';
 
 describe('Repo Downloader Module', () => {
   const testDir = path.join(__dirname, 'fixtures', 'test-repos');
@@ -42,7 +42,7 @@ describe('Repo Downloader Module', () => {
       const result = parseRepoUrl('https://github.com/user/repo');
       expect(result).toEqual({
         gitUrl: 'https://github.com/user/repo.git',
-        ref: null
+        ref: null,
       });
     });
 
@@ -50,7 +50,7 @@ describe('Repo Downloader Module', () => {
       const result = parseRepoUrl('git@github.com:user/repo.git');
       expect(result).toEqual({
         gitUrl: 'https://github.com/user/repo.git',
-        ref: null
+        ref: null,
       });
     });
 
@@ -58,7 +58,7 @@ describe('Repo Downloader Module', () => {
       const result = parseRepoUrl('https://github.com/user/repo', '1.0.0');
       expect(result).toEqual({
         gitUrl: 'https://github.com/user/repo.git',
-        ref: 'v1.0.0'
+        ref: 'v1.0.0',
       });
     });
 
@@ -66,7 +66,7 @@ describe('Repo Downloader Module', () => {
       const result = parseRepoUrl('https://github.com/user/repo#main');
       expect(result).toEqual({
         gitUrl: 'https://github.com/user/repo.git',
-        ref: null
+        ref: null,
       });
     });
 
@@ -74,7 +74,7 @@ describe('Repo Downloader Module', () => {
       const result = parseRepoUrl('github.com/user/repo');
       expect(result).toEqual({
         gitUrl: 'https://github.com/user/repo.git',
-        ref: null
+        ref: null,
       });
     });
 
@@ -98,7 +98,7 @@ describe('Repo Downloader Module', () => {
         const mockChild = {
           stdout: { on: mock() },
           stderr: { on: mock() },
-          on: mockOn
+          on: mockOn,
         };
         return mockChild;
       });
@@ -106,7 +106,7 @@ describe('Repo Downloader Module', () => {
 
     it('should handle component without repo_url', async () => {
       const components = [
-        { name: 'package1', version: '1.0.0', repo_url: null as unknown as string }
+        { name: 'package1', version: '1.0.0', repo_url: null as unknown as string },
       ];
 
       const { results } = await downloadRepos(components, { baseDir: testDir });
@@ -114,13 +114,13 @@ describe('Repo Downloader Module', () => {
       expect(results.package1).toEqual({
         success: false,
         path: null,
-        reason: 'no_repo_url'
+        reason: 'no_repo_url',
       });
     });
 
     it('should handle invalid repo URL', async () => {
       const components = [
-        { name: 'package1', version: '1.0.0', repo_url: '' }
+        { name: 'package1', version: '1.0.0', repo_url: '' },
       ];
 
       const { results } = await downloadRepos(components, { baseDir: testDir });
@@ -128,7 +128,7 @@ describe('Repo Downloader Module', () => {
       expect(results.package1).toEqual({
         success: false,
         path: null,
-        reason: 'no_repo_url'
+        reason: 'no_repo_url',
       });
     });
 
@@ -137,7 +137,7 @@ describe('Repo Downloader Module', () => {
       fs.mkdirSync(cachePath, { recursive: true });
 
       const components = [
-        { name: 'package', version: '1.0.0', repo_url: 'https://github.com/user/repo' }
+        { name: 'package', version: '1.0.0', repo_url: 'https://github.com/user/repo' },
       ];
 
       const { results } = await downloadRepos(components, { baseDir: testDir });
@@ -151,7 +151,7 @@ describe('Repo Downloader Module', () => {
 
     it('should clone repository if not cached', async () => {
       const components = [
-        { name: 'package', version: '1.0.0', repo_url: 'https://github.com/user/repo' }
+        { name: 'package', version: '1.0.0', repo_url: 'https://github.com/user/repo' },
       ];
 
       const { results } = await downloadRepos(components, { baseDir: testDir });
@@ -169,13 +169,13 @@ describe('Repo Downloader Module', () => {
         const mockChild = {
           stdout: { on: mock() },
           stderr: { on: mock() },
-          on: mockOn
+          on: mockOn,
         };
         return mockChild;
       });
 
       const components = [
-        { name: 'package', version: '1.0.0', repo_url: 'https://github.com/user/repo' }
+        { name: 'package', version: '1.0.0', repo_url: 'https://github.com/user/repo' },
       ];
 
       const { results } = await downloadRepos(components, { baseDir: testDir });
@@ -192,13 +192,13 @@ describe('Repo Downloader Module', () => {
         const mockChild = {
           stdout: { on: mock() },
           stderr: { on: mock() },
-          on: mockOn
+          on: mockOn,
         };
         return mockChild;
       });
 
       const components = [
-        { name: 'package', version: '1.0.0', repo_url: 'https://github.com/user/repo' }
+        { name: 'package', version: '1.0.0', repo_url: 'https://github.com/user/repo' },
       ];
 
       const { results } = await downloadRepos(components, { baseDir: testDir });
@@ -218,13 +218,13 @@ describe('Repo Downloader Module', () => {
         const mockChild = {
           stdout: { on: mock() },
           stderr: { on: mock() },
-          on: mockOn
+          on: mockOn,
         };
         return mockChild;
       });
 
       const components = [
-        { name: 'package', version: '1.0.0', repo_url: 'https://github.com/user/repo' }
+        { name: 'package', version: '1.0.0', repo_url: 'https://github.com/user/repo' },
       ];
 
       const { results } = await downloadRepos(components, { baseDir: testDir });
@@ -237,7 +237,7 @@ describe('Repo Downloader Module', () => {
       const components = [
         { name: 'pkg1', version: '1.0.0', repo_url: 'https://github.com/user/repo1' },
         { name: 'pkg2', version: '2.0.0', repo_url: 'https://github.com/user/repo2' },
-        { name: 'pkg3', version: '3.0.0', repo_url: null as unknown as string }
+        { name: 'pkg3', version: '3.0.0', repo_url: null as unknown as string },
       ];
 
       const { results } = await downloadRepos(components, { baseDir: testDir });
@@ -252,7 +252,7 @@ describe('Repo Downloader Module', () => {
       const consoleSpy = spyOn(console, 'log').mockImplementation(() => {});
 
       const components = [
-        { name: 'pkg1', version: '1.0.0', repo_url: 'https://github.com/user/repo1' }
+        { name: 'pkg1', version: '1.0.0', repo_url: 'https://github.com/user/repo1' },
       ];
 
       await downloadRepos(components, { baseDir: testDir });
@@ -263,7 +263,7 @@ describe('Repo Downloader Module', () => {
 
     it('should handle special characters in package name', async () => {
       const components = [
-        { name: '@scope/package-name', version: '1.0.0', repo_url: 'https://github.com/user/repo' }
+        { name: '@scope/package-name', version: '1.0.0', repo_url: 'https://github.com/user/repo' },
       ];
 
       const { results } = await downloadRepos(components, { baseDir: testDir });

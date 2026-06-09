@@ -25,18 +25,18 @@ const fsMock = {
   unlinkSync: mockUnlinkSync,
   statSync: mockStatSync,
 };
-mock.module('fs', () => ({ ...fsMock, default: fsMock }));
+mock.module('fs', () => ({ ...fsMock, 'default': fsMock }));
 
 const mockHomedir = mock();
 const osMock = { ...actualOs, homedir: mockHomedir };
-mock.module('os', () => ({ ...osMock, default: osMock }));
+mock.module('os', () => ({ ...osMock, 'default': osMock }));
 
 const {
   uniq,
   normalizeLibraryNames,
   isTestFile,
   safeReadFile,
-  getCacheDir
+  getCacheDir,
 } = await import('../src/lib/utils');
 
 describe('Utils Module', () => {
