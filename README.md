@@ -2,9 +2,7 @@
 
 Sbomtest é uma ferramenta de linha de comando que analisa projetos npm, pnpm e yarn e gera arquivos markdown com testes das dependências externas para cada arquivo de código-fonte, usando **Horsebox** como mecanismo de busca de código.
 
-[![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=jadsongmatos_sbomtest)](https://sonarcloud.io/summary/new_code?id=jadsongmatos_sbomtest)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=jadsongmatos_sbomtest&metric=coverage)](https://sonarcloud.io/summary/new_code?id=jadsongmatos_sbomtest)
-[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=jadsongmatos_sbomtest&metric=bugs)](https://sonarcloud.io/summary/new_code?id=jadsongmatos_sbomtest)
+[![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=jadsongmatos_ctest)](https://sonarcloud.io/summary/new_code?id=jadsongmatos_ctest)
 
 ## Visão Geral
 
