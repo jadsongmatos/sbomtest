@@ -27,10 +27,6 @@ O Sbomtest analisa seu projeto npm para identificar quais funções de bibliotec
 O Sbomtest requer o **Horsebox** (`hb`) instalado no sistema:
 
 ```bash
-# Instalar uv (gerenciador de pacotes Python)
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Instalar Horsebox
 uv tool install git+https://github.com/michelcaradec/horsebox
 ```
 
