@@ -1,30 +1,30 @@
-# Ctest
+# Sbomtest
 
-Ctest é uma ferramenta de linha de comando que analisa projetos npm, pnpm e yarn e gera arquivos markdown com testes das dependências externas para cada arquivo de código-fonte, usando **Horsebox** como mecanismo de busca de código.
+Sbomtest é uma ferramenta de linha de comando que analisa projetos npm, pnpm e yarn e gera arquivos markdown com testes das dependências externas para cada arquivo de código-fonte, usando **Horsebox** como mecanismo de busca de código.
 
-[![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=jadsongmatos_ctest)](https://sonarcloud.io/summary/new_code?id=jadsongmatos_ctest)
-[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=jadsongmatos_ctest&metric=coverage)](https://sonarcloud.io/summary/new_code?id=jadsongmatos_ctest)
-[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=jadsongmatos_ctest&metric=bugs)](https://sonarcloud.io/summary/new_code?id=jadsongmatos_ctest)
+[![Quality gate](https://sonarcloud.io/api/project_badges/quality_gate?project=jadsongmatos_sbomtest)](https://sonarcloud.io/summary/new_code?id=jadsongmatos_sbomtest)
+[![Coverage](https://sonarcloud.io/api/project_badges/measure?project=jadsongmatos_sbomtest&metric=coverage)](https://sonarcloud.io/summary/new_code?id=jadsongmatos_sbomtest)
+[![Bugs](https://sonarcloud.io/api/project_badges/measure?project=jadsongmatos_sbomtest&metric=bugs)](https://sonarcloud.io/summary/new_code?id=jadsongmatos_sbomtest)
 
 ## Visão Geral
 
-O Ctest analisa seu projeto npm para identificar quais funções de bibliotecas externas são usadas em cada arquivo fonte, então gera arquivos markdown contendo os casos de teste relevantes dessas bibliotecas externas.
+O Sbomtest analisa seu projeto npm para identificar quais funções de bibliotecas externas são usadas em cada arquivo fonte, então gera arquivos markdown contendo os casos de teste relevantes dessas bibliotecas externas.
 
 ## Recursos
 
-- **Checklist Global**: Gera um arquivo `CTEST_CHECKLIST.md` para você controlar o progresso da revisão de cada arquivo analisado.
+- **Checklist Global**: Gera um arquivo `SBOMTEST_CHECKLIST.md` para você controlar o progresso da revisão de cada arquivo analisado.
 - **Checklist por Arquivo**: Cada markdown gerado contém um checklist das bibliotecas detectadas.
-- **Persistent Cache**: As dependências baixadas são armazenadas em um cache local (`~/.ctest/repos`), evitando downloads repetidos.
+- **Persistent Cache**: As dependências baixadas são armazenadas em um cache local (`~/.sbomtest/repos`), evitando downloads repetidos.
 - **Índices Horsebox Persistente**: Os índices do Horsebox são armazenados em `<download-dir>/.horsebox/`, permitindo reutilização em execuções futuras.
 - **Filtro de Dependências Diretas**: Use `--direct-only` para ignorar dependências transitivas e focar no que importa.
-- **Auto-discovery de Repo**: Se o `repo_url` estiver faltando no SBOM, o Ctest tenta buscá-lo automaticamente no registro do npm.
+- **Auto-discovery de Repo**: Se o `repo_url` estiver faltando no SBOM, o Sbomtest tenta buscá-lo automaticamente no registro do npm.
 - **Normalização de URLs**: Converte automaticamente URLs de repositório `git+https` e `git:` para `https` compatível com GitHub.
 - **Horsebox Integration**: Indexa o projeto e dependências com Horsebox para buscas ultrarrápidas de trechos de código.
 - **AST Analysis**: Detecta funções, membros e cadeias de chamadas (ex: `prisma.user.findUnique`) usando parser do Babel.
 
 ## Dependências Externas
 
-O Ctest requer o **Horsebox** (`hb`) instalado no sistema:
+O Sbomtest requer o **Horsebox** (`hb`) instalado no sistema:
 
 ```bash
 # Instalar uv (gerenciador de pacotes Python)
@@ -42,13 +42,13 @@ npm install
 
 ## Instalação como Skill do GitHub Copilot
 
-Você pode instalar o Ctest como um skill do GitHub Copilot usando o comando `npx skills add`:
+Você pode instalar o Sbomtest como um skill do GitHub Copilot usando o comando `npx skills add`:
 
 ```bash
-npx skills add jadsonmatos/ctest
+npx skills add jadsonmatos/sbomtest
 ```
 
-Isso adicionará o skill `ctest-review` ao seu projeto, permitindo que o GitHub Copilot gere testes automatizados baseados na análise do Ctest.
+Isso adicionará o skill `sbomtest-review` ao seu projeto, permitindo que o GitHub Copilot gere testes automatizados baseados na análise do Sbomtest.
 
 ### Usando o Skill
 
@@ -56,22 +56,22 @@ Após instalado, você pode usar o skill para gerar testes:
 
 ```bash
 # Gerar testes para um arquivo específico
-/ctest-review src/lib/utils.js
+/sbomtest-review src/lib/utils.js
 
 # Ou simplesmente peça ao Copilot para usar o skill em qualquer arquivo que você quer testar
 ```
 
-O skill lerá o arquivo `.md` gerado pelo Ctest e criará testes Jest correspondentes para as bibliotecas externas detectadas.
+O skill lerá o arquivo `.md` gerado pelo Sbomtest e criará testes Jest correspondentes para as bibliotecas externas detectadas.
 
 ## Suporte a pnpm e Yarn
 
-O Ctest detecta automaticamente o gerenciador de pacotes do projeto:
+O Sbomtest detecta automaticamente o gerenciador de pacotes do projeto:
 
 - **pnpm**: Projetos com `pnpm-lock.yaml` usam `@cyclonedx/cyclonedx-pnpm`
 - **yarn**: Projetos com `yarn.lock` usam `@cyclonedx/cyclonedx-yarn`
 - **npm**: Projetos com `package-lock.json` usam `@cyclonedx/cyclonedx-npm`
 
-Nenhuma configuração adicional é necessária - basta executar o Ctest no diretório do projeto.
+Nenhuma configuração adicional é necessária - basta executar o Sbomtest no diretório do projeto.
 
 ## Início Rápido
 
@@ -94,7 +94,7 @@ node src/index.js . --file=src/lib/utils.js --download-dependencies
 | `<project-path>` | Caminho para o projeto (npm/pnpm/yarn) (padrão: `.`) |
 | `--download-dependencies` | Habilita o download/uso do cache de repositórios das dependências |
 | `--direct-only` | Analisa apenas dependências diretas listadas no `package.json` |
-| `--download-dir=<path>` | Muda o diretório de cache de repositórios (padrão: `~/.ctest/repos`) |
+| `--download-dir=<path>` | Muda o diretório de cache de repositórios (padrão: `~/.sbomtest/repos`) |
 | `--file=<arquivo>` | Analisa apenas um arquivo específico do projeto |
 | `--include=<pattern>` | Filtra arquivos para análise usando padrões glob (ex: `src/**`, `**/*.ts`) |
 | `--exclude=<pattern>` | Exclui arquivos da análise usando padrões glob (ex: `**/*.test.js`, `**/vendor/**`) |
@@ -132,10 +132,10 @@ node src/index.js . --download-dependencies --include="src/**,lib/**"
 2. **Repository Cache**: Gerencia o download das dependências para um diretório persistente. Se já existir, pula o download.
 3. **Horsebox Indexing**: Cria índices persistentes em `<download-dir>/.horsebox/`. Se os índices já existirem, reutiliza para acelerar execuções futuras.
 4. **AST Analysis**: Varre seus arquivos `.js`, `.ts`, etc., identificando o uso exato de cada biblioteca externa.
-5. **Smart Search**: Para cada função ou cadeia detectada, o Ctest pergunta ao Horsebox onde isso aparece em arquivos de teste nas dependências.
+5. **Smart Search**: Para cada função ou cadeia detectada, o Sbomtest pergunta ao Horsebox onde isso aparece em arquivos de teste nas dependências.
 6. **Code Extraction**: Extrai os blocos `test()` e `it()` que contenham os termos buscados.
 7. **Markdown Generation**: Gera um `.md` para cada arquivo, com checklists de libs e os exemplos de código encontrados.
-8. **Checklist Global**: Cria o `CTEST_CHECKLIST.md` na raiz do projeto para você marcar o que já revisou.
+8. **Checklist Global**: Cria o `SBOMTEST_CHECKLIST.md` na raiz do projeto para você marcar o que já revisou.
 
 ## Uso Programático
 

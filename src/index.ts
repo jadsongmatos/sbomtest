@@ -291,8 +291,8 @@ async function analyze(projectPath: string, options: AnalyzeOptions = {}): Promi
 
   // Generate a global checklist for tracking progress
   if (generated.length > 0) {
-    const checklistPath = path.join(resolvedProjectPath, 'CTEST_CHECKLIST.md');
-    let checklistMd = '# CTest Analysis Checklist\n\n';
+const checklistPath = path.join(resolvedProjectPath, 'SBOMTEST_CHECKLIST.md');
+  let checklistMd = '# Sbomtest Analysis Checklist\n\n';
     checklistMd += `Generated on: ${new Date().toLocaleString()}\n\n`;
     checklistMd += 'Use this file to track your progress reviewing the generated external tests.\n\n';
 

@@ -451,7 +451,7 @@ describe('Horsebox Integration', () => {
   let indexDir: string;
 
   beforeAll(() => {
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ctest-hb-'));
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sbomtest-hb-'));
     indexDir = path.join(tempDir, 'index');
 
     const content = `
@@ -508,7 +508,7 @@ describe('Markdown Generator Integration', () => {
   let libsLineIndexDir: string;
 
   beforeAll(() => {
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ctest-md-'));
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sbomtest-md-'));
     libsIndexDir = path.join(tempDir, 'libs-index');
     libsLineIndexDir = path.join(tempDir, 'libs-line-index');
 
@@ -702,7 +702,7 @@ describe('fs module tests (from index.js.md)', () => {
   let tempFile: string;
 
   beforeAll(() => {
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ctest-fs-test-'));
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sbomtest-fs-test-'));
     tempFile = path.join(tempDir, 'test-file.txt');
   });
 
@@ -785,7 +785,7 @@ describe('os module tests (from index.js.md)', () => {
   });
 
   it('should use os.tmpdir for creating temp directories', () => {
-    const testTempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ctest-os-test-'));
+    const testTempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sbomtest-os-test-'));
     expect(fs.existsSync(testTempDir)).toBe(true);
     fs.rmSync(testTempDir, { recursive: true, force: true });
   });
@@ -811,7 +811,7 @@ describe('os module tests (from index.js.md)', () => {
 describe('Integration tests for index.js main functionality', () => {
   it('should handle project analysis with download-dir option', async () => {
     const testProjectPath = path.join(__dirname, 'fixtures', 'test-project');
-    const customDownloadDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ctest-download-'));
+    const customDownloadDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sbomtest-download-'));
 
     if (!fs.existsSync(testProjectPath)) {
       console.log('Skipping test - test-project fixture not found');
@@ -844,7 +844,7 @@ describe('Integration tests for index.js main functionality', () => {
 
   it('should reuse existing indexes when running analysis twice', async () => {
     const testProjectPath = path.join(__dirname, 'fixtures', 'test-project');
-    const customDownloadDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ctest-reuse-'));
+    const customDownloadDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sbomtest-reuse-'));
 
     if (!fs.existsSync(testProjectPath)) {
       console.log('Skipping test - test-project fixture not found');

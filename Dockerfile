@@ -34,7 +34,7 @@ COPY . .
 RUN chmod +x src/index.js
 
 # Test the installation
-RUN node src/index.js --help 2>/dev/null || echo "CTest installed successfully (help output may vary)"
+RUN node src/index.js --help 2>/dev/null || echo "Sbomtest installed successfully (help output may vary)"
 
 # Default command
 CMD ["node", "src/index.js", "."]

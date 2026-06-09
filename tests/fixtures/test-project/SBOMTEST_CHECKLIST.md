@@ -1,4 +1,4 @@
-# CTest Analysis Checklist
+# Sbomtest Analysis Checklist
 
 Generated on: 6/8/2026, 6:17:50 AM
 
