@@ -259,7 +259,7 @@ export function analyzeSourceFile(filePath: string): Record<string, LibraryUsage
       if (!libraryUsage[libName]) {
         libraryUsage[libName] = { functions: new Set(), members: {}, chains: new Set() };
       }
-      if (!libraryUsage[libName].members[objName]) {
+      if (!Object.prototype.hasOwnProperty.call(libraryUsage[libName].members, objName)) {
         libraryUsage[libName].members[objName] = new Set();
       }
       props.forEach(prop => libraryUsage[libName].members[objName].add(prop));

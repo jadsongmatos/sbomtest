@@ -129,7 +129,7 @@ async function analyze(projectPath: string, options: AnalyzeOptions = {}): Promi
     maxDownloads = -1,
     respectGitIgnore = true,
     downloadDir = null,
-    directOnly = false,
+    directOnly = true,
     includePatterns = null,
     excludePatterns = null,
   } = options;
@@ -322,7 +322,8 @@ USAGE:
 OPTIONS:
   --download-dependencies  Baixa código fonte das dependências via Git
   --download-dir=<dir>     Diretório para baixar dependências (default: cache)
-  --direct-only            Analisa somente dependências diretas
+  --direct-only Analisa somente dependências diretas (default: true)
+  --include-transitive Inclui dependências transitivas
   --max-downloads=<n>      Limita número de downloads de dependências
   --file=<path>            Analisa apenas um arquivo específico
   --include=<patterns>     Padrões de inclusão (separados por vírgula)
@@ -331,7 +332,8 @@ OPTIONS:
   --help                   Mostra esta ajuda
 
 EXAMPLES:
-  sbomtest . --download-dependencies --direct-only
+  sbomtest . --download-dependencies
+  sbomtest . --download-dependencies --include-transitive
   sbomtest . --file=src/lib/utils.js --download-dependencies
   sbomtest . --download-dependencies --download-dir=./deps --max-downloads=5
   sbomtest . --include="src/**" --exclude="src/test/**"
@@ -353,7 +355,7 @@ if (typeof Bun !== 'undefined' && Bun.main === import.meta.path) {
   const includeArg = args.find((arg: string) => arg.startsWith('--include='));
   const excludeArg = args.find((arg: string) => arg.startsWith('--exclude='));
   const downloadFlag = args.includes('--download-dependencies');
-  const directOnlyFlag = args.includes('--direct-only');
+  const directOnlyFlag = !args.includes('--include-transitive');
   const maxDownloadsArg = args.find((arg: string) => arg.startsWith('--max-downloads='));
   const respectGitIgnoreArg = args.find((arg: string) => arg.startsWith('--respect-gitignore='));
   const downloadDirArg = args.find((arg: string) => arg.startsWith('--download-dir='));
